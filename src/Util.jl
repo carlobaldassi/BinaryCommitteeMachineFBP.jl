@@ -7,7 +7,7 @@ export exclusive,
        @readmagvec, @dumpmagvecs,
        IVec, Vec, Vec2, MagVec, MagVec2, MagVec3
 
-using ..Mag64
+using ..Mag64, ..showinner, ..parseinner
 
 if success(`which lockfile`)
     function exclusive(f::Function, fn::AbstractString = "lock.tmp")
