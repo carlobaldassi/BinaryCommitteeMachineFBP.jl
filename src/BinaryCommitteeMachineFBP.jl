@@ -54,8 +54,6 @@ immutable Messages
     mτ2::MagVec    # 2+
     uτ1::MagVec2   # 2
 
-    mw0::MagVec2
-
     function Messages(M::Int, N::Int, K::Int, x::Float64)
         ux = [mflatp(N) for k = 1:K]
         mw = [mflatp(N) for k = 1:K]
@@ -74,8 +72,7 @@ immutable Messages
             mτ1[a][k] = mτ1[a][k] ⊗ Uτ1[a][k] ⊗ uτ1[a][k]
         end
 
-        mw0 = [mflatp(N) for k = 1:K]
-        new(N, K, M, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1, mw0)
+        new(N, K, M, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1)
     end
 
     global read_messages
@@ -94,16 +91,15 @@ immutable Messages
         Uτ1 = [mflatp(K) for a = 1:M]
         mτ2 = mflatp(M)
         uτ1 = [mflatp(K) for a = 1:M]
-        mw0 = [mflatp(N) for k = 1:K]
 
         expected_lines = K + K + M + M*K + M + 1 + M + K
         for (i,l) in enumerate(eachline(io))
             i > expected_lines && (@assert strip(l) == "END"; break)
             #@show i
-            @readmagvec(l, fmt, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1, mw0)
+            @readmagvec(l, fmt, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1)
         end
         @assert eof(io)
-        return new(N, K, M, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1, mw0)
+        return new(N, K, M, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1)
     end
 end
 
@@ -116,11 +112,11 @@ function write_messages(filename::AbstractString, messages::Messages)
 end
 
 function write_messages(io::IO, messages::Messages)
-    @extract messages : N K M ux mw mτ1 uw Uτ1 mτ2 uτ1 mw0
+    @extract messages : N K M ux mw mτ1 uw Uτ1 mτ2 uτ1
 
     println(io, "fmt: ", magformat())
     println(io, "N,K,M: $N $K $M")
-    @dumpmagvecs(io, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1, mw0)
+    @dumpmagvecs(io, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1)
     println(io, "END")
 end
 
@@ -131,7 +127,6 @@ function Base.copy!(dest::Messages, src::Messages)
     for k = 1:dest.K
         copy!(dest.ux[k], src.ux[k])
         copy!(dest.mw[k], src.mw[k])
-        copy!(dest.mw0[k], src.mw0[k])
     end
     for a = 1:dest.M, k = 1:dest.K
         copy!(dest.uw[a][k], src.uw[a][k])
@@ -151,13 +146,6 @@ function set_outfields!(messages::Messages, output::Vector, β::Float64)
     t = tanh(β / 2)
     for a = 1:M
         mτ2[a] = forcedmag(output[a] * t) # forced avoids clamping
-    end
-end
-
-function save_mags!(messages::Messages)
-    @extract messages N K mw mw0
-    for k = 1:K, i = 1:N
-        mw0[k][i] = mw[k][i]
     end
 end
 
