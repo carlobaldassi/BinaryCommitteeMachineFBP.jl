@@ -2,7 +2,6 @@
 
 module BinaryCommitteeMachineFBP
 
-using DataFrames
 using StatsFuns
 using GZip
 using ExtractMacro
