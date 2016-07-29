@@ -1,3 +1,5 @@
+# This file is a part of BinaryCommitteeMachineFBP.jl. License is MIT: http://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/LICENCE.md
+
 module AtanhErf
 
 export atanherf, batanherf

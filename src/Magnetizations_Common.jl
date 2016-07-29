@@ -1,3 +1,5 @@
+# This file is a part of BinaryCommitteeMachineFBP.jl. License is MIT: http://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/LICENCE.md
+
 export Mag64, mfill, mflatp, mrand, damp, reinforce, ⊗, ⊘, ↑, sign0,
        merf, exactmix, erfmix, mtanh, log1pxy, mcrossentropy,
        logZ, forcedmag, showinner, parseinner, magformat
