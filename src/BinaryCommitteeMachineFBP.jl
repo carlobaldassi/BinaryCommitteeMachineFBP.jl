@@ -157,17 +157,6 @@ function print_mags(io::IO, messages::Messages)
     end
 end
 
-function compare_signs(messages::Messages, ws::Vec2)
-    @extract messages N K mw
-    @assert length(ws) == K
-    @assert all(w->(length(w) == N), ws)
-    diff = 0
-    for k = 1:K, i = 1:N
-        diff += (sign(mw[k][i]) ≠ sign(ws[k][i]))
-    end
-    return diff
-end
-
 type Params
     damping::Float64
     ϵ::Float64
@@ -207,18 +196,6 @@ function Patterns(patternsfile::AbstractString)
     o = Int[1.0 for a = 1:M]
 
     return Patterns(X,o)
-end
-
-function set_τ1_fields!(messages::Messages, ws::Vec2, pol::Mag64, patterns::Patterns)
-    @extract messages N M K mτ1
-    @extract patterns X
-    @assert length(ws) == K
-    @assert all(w->(length(w) == N), ws)
-    for a = 1:M, k = 1:K
-        v = sign(ws[k] ⋅ X[a])
-        @assert v ≠ 0
-        mτ1[a][k] = copysign(pol, v)
-    end
 end
 
 function computeσ²(w::Vec)
@@ -262,8 +239,8 @@ end
 
 let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), vHs = Dict{Int,Vec}(), leftCs = Dict{Int,Vec2}(), rightCs = Dict{Int,Vec2}()
 
-    global theta_node_update!
-    function theta_node_update!(m::MagVec, M::Mag64, ξ::Vec, u::MagVec, U::Mag64, params::Params)
+    global theta_node_update_approx!
+    function theta_node_update_approx!(m::MagVec, M::Mag64, ξ::Vec, u::MagVec, U::Mag64, params::Params)
         @extract params λ=damping
 
         N = length(m)
@@ -321,21 +298,13 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
 
         subfield!(h, m, u)
         H = M ⊘ U
-        #ξ == ones(N) && abs(M) == 1.0 && @assert abs(H) == 1.0 (M,H,U) #DBG
-
-        #all(mi->abs(mi)==1, m) && @assert all(hi->abs(hi)==1.0, h) (m,h,u) #DBG
 
         @inbounds for i = 1:N
             vh[i] = h[i]
         end
-        #@assert m == vh
-
-        #vH = Float64(H)
 
         σ² = computeσ²(vh, ξ)
         μ = dot(vh, ξ)
-
-        #@assert σ² == 0
 
         dσ² = 2σ²
         newU = merf(μ / √dσ²)
@@ -343,7 +312,6 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
         maxdiff = 0.0
         U = damp(newU, U, λ)
         M = H ⊗ U
-        #@assert isfinite(M) (M,H,U)
 
         @inbounds for i = 1:N
             ξi = ξ[i]
@@ -360,7 +328,6 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
             m₋ = (μ̄ - ξi) / sdσ̄²
             newu = erfmix(H, m₊, m₋)
             maxdiff = max(maxdiff, abs(newu - u[i]))
-            #u[i] = clamp(newu * (1-λ) + u[i] * λ, -1+1e-15, 1-1e-15)
             u[i] = damp(newu, u[i], λ)
             m[i] = h[i] ⊗ u[i]
         end
@@ -379,7 +346,6 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
 
         subfield!(h, m, u)
         H = M ⊘ U
-        #abs(M) == 1.0 && @assert (H == M || U == M) (H,M,U)
 
         @inbounds for i = 1:N
             vh[i] = h[i]
@@ -425,7 +391,6 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
         @assert isfinite(newU)
 
         maxdiff = 0.0
-        #maxdiff = abs(U - newU)
         U = damp(newU, U, λ)
         newM = H ⊗ U
         M = newM
@@ -507,25 +472,19 @@ function iterate!(messages::Messages, patterns::Patterns, params::Params)
     maxdiff = 0.0
     tnu1! = accuracy1 == :exact ? theta_node_update_exact! :
             accuracy1 == :accurate ? theta_node_update_accurate! :
-            accuracy1 == :none ? theta_node_update! :
+            accuracy1 == :none ? theta_node_update_approx! :
             error("accuracy must be one of :exact, :accurate, :none (was given $accuracy)")
     tnu2! = accuracy2 == :exact ? theta_node_update_exact! :
             accuracy2 == :accurate ? theta_node_update_accurate! :
-            accuracy2 == :none ? theta_node_update! :
+            accuracy2 == :none ? theta_node_update_approx! :
             error("accuracy must be one of :exact, :accurate, :none (was given $accuracy)")
     for a = randperm(M + N*K)
         if a ≤ M
             ξ = X[a]
-            #out = output[a]
-            #println("a = $a")
-            #println("out = $out")
-            #println("Uτ1 pre  = ", Uτ1[a])
             for k = 1:K
                 diff, Uτ1[a][k], mτ1[a][k] = tnu1!(mw[k], mτ1[a][k], ξ, uw[a][k], Uτ1[a][k], params)
                 maxdiff = max(maxdiff, diff)
             end
-            #println("Uτ1 post = ", Uτ1[a])
-            #println()
             diff, _, mτ2[a] = tnu2!(mτ1[a], mτ2[a], ones(K), uτ1[a], zero(Mag64) #=Uτ2[a]=#, params)
             maxdiff = max(maxdiff, diff)
         else
@@ -569,7 +528,6 @@ function converge!(messages::Messages, patterns::Patterns, params::Params)
         ok || println("\nfailed")
         println("elapsed time = $t seconds")
     end
-    #params.damping = λ₀
     return ok
 end
 
@@ -579,9 +537,6 @@ transf1!(r0::Vec, ws::Vec2, ξ::Vec) = transf1(transf0!(r0, ws, ξ))
 
 function test!(r0::Vec, ws::Vec2, ξ::Vec, out::Int)
     o = transf1!(r0, ws, ξ)
-    #println("out=$out o=$o")
-    #println("r0=$r0")
-    #println()
     return o != out
 end
 
@@ -707,45 +662,7 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), leftCs = Dict{Int,Vec2}(), r
     end
 end
 
-function free_energy(messages::Messages, patterns::Patterns, ws::Vec2, γ::Float64)
-    @extract messages M N K mw mτ1 uw Uτ1 mτ2 uτ1
-    @extract patterns X output
-
-    f = 0.0
-
-    for a = 1:M
-        ξ = X[a]
-        #out = output[a]
-        for k = 1:K
-            f += free_energy_theta(mw[k], mτ1[a][k], ξ, uw[a][k], Uτ1[a][k])
-        end
-        #f += free_energy_theta(mτ1[a], mτ2[a], ones(K), uτ1[a], 0.0 #=Uτ2[a]=#)
-        f += free_energy_theta_exact(mτ1[a], mτ2[a], ones(K), uτ1[a], zero(Mag64) #=Uτ2[a]=#)
-    end
-
-    zkip = [zeros(N) for k = 1:K]
-    zkim = [zeros(N) for k = 1:K]
-    for a = 1:M, k = 1:K, i = 1:N
-        zkip[k][i] += log((1 + uw[a][k][i]) / 2) # XXX mag?
-        zkim[k][i] += log((1 - uw[a][k][i]) / 2)
-    end
-
-    for k = 1:K, i = 1:N
-        ap = γ * ws[k][i] + zkip[k][i]
-        am = -γ * ws[k][i] + zkim[k][i]
-
-        zki = exp(ap) + exp(am)
-        #@show  γ,ws[k][i],zkip[k][i],zkim[k][i]
-        f -= log(zki)
-        @assert isfinite(f)
-        #println("k=$k i=$i zki=$zki f=$f")
-    end
-
-    return -f / (N * K)
-end
-
 # used with pseudo-reinforcement.
-# Would be nice to merge with the other (note that the other has the wrong sign)
 function free_energy2(messages::Messages, patterns::Patterns, params::Params)
     @extract messages : M N K ux mw mτ1 uw Uτ1 mτ2 uτ1
     @extract patterns : X output
@@ -755,12 +672,10 @@ function free_energy2(messages::Messages, patterns::Patterns, params::Params)
 
     for a = 1:M
         ξ = X[a]
-        #out = output[a]
         for k = 1:K
             f += free_energy_theta(mw[k], mτ1[a][k], ξ, uw[a][k], Uτ1[a][k])
         end
-        #f += free_energy_theta(mτ1[a], mτ2[a], ones(K), uτ1[a], 0.0 #=Uτ2[a]=#)
-        f += free_energy_theta_exact(mτ1[a], mτ2[a], ones(K), uτ1[a], zero(Mag64) #=Uτ2[a]=#)
+        f += free_energy_theta_exact(mτ1[a], mτ2[a], ones(K), uτ1[a], zero(Mag64))
     end
 
     #zkip = [zeros(N) for k = 1:K]
@@ -799,69 +714,6 @@ function free_energy2(messages::Messages, patterns::Patterns, params::Params)
 
     return f / (N * K)
 end
-
-# This returns the free etropy of the replicated model, including the w̃ nodes.
-# NOTE: not density; not divided by y
-function free_entropy(messages::Messages, patterns::Patterns, params::Params)
-    @extract messages : M N K ux mw mτ1 uw Uτ1 mτ2 uτ1
-    @extract patterns : X output
-    @extract params   : r pol
-
-    f = 0.0
-
-    for a = 1:M
-        ξ = X[a]
-        #out = output[a]
-        for k = 1:K
-            f += free_energy_theta(mw[k], mτ1[a][k], ξ, uw[a][k], Uτ1[a][k])
-        end
-        #f += free_energy_theta(mτ1[a], mτ2[a], ones(K), uτ1[a], 0.0 #=Uτ2[a]=#)
-        f += free_energy_theta_exact(mτ1[a], mτ2[a], ones(K), uτ1[a], zero(Mag64) #=Uτ2[a]=#)
-    end
-
-    zkip = [zeros(N) for k = 1:K]
-    zkim = [zeros(N) for k = 1:K]
-    for a = 1:M, k = 1:K, i = 1:N
-        zkip[k][i] += log((1 + uw[a][k][i]) / 2) # XXX mag?
-        zkim[k][i] += log((1 - uw[a][k][i]) / 2)
-    end
-
-    for k = 1:K, i = 1:N
-        ## Slight simplification below
-        # zki = ((1 + ux[k][i]) * zkip[k][i] + (1 - ux[k][i]) * zkim[k][i]) / 2
-        # f -= log(zki)                                                                    # ki varnode
-
-        # hkix = Float64(mw[k][i] ⊘ ux[k][i])
-        # hxki = tanh(r * atanh(hkix * pol))
-        # f -= log((1 + hkix * hxki * pol) / √(1 - pol^2))                                 # γ node
-        # f += log((1 + hkix * ux[k][i]) / 2)                                              # ki ↔ γ edge
-        # f += log((1 + hxki * hkix * pol) / 2)                                            # γ ↔ x node
-        # f -= log(((1 + hkix * pol) / 2)^(r+1) + ((1 - hkix * pol) / 2)^(r+1)) / (r + 1)  # x varnode
-
-        zki = (1 + ux[k][i]) * exp(zkip[k][i]) + (1 - ux[k][i]) * exp(zkim[k][i])
-        f -= log(zki)
-        #f += log(1 - pol^2) / 2
-        f += log1pxy(pol, -pol) / 2 + log(2)/2
-        # XXX mag? ↓
-        hkix = Float64(mw[k][i] ⊘ ux[k][i])
-        f += log((1 + hkix * ux[k][i]) / 2)
-        f -= log(((1 + hkix * pol) / 2)^(r+1) + ((1 - hkix * pol) / 2)^(r+1)) / (r + 1)
-    end
-
-    return f * (r + 1)
-end
-
-function overlap(messages::Messages, ws::Vec2)
-    @extract messages K N mw
-    S = 0.0
-    for k = 1:K, i = 1:N
-        S += mw[k][i] * ws[k][i]
-    end
-    return S / (N * K)
-end
-
-entropy(F::Float64, S::Float64, γ::Float64) = F - γ * S
-entropy(messages::Messages, patterns::Patterns, ws::Vec2, γ::Float64) = free_energy(messages, patterns, ws, γ) - γ * overlap(messages, ws)
 
 function compute_S(messages::Messages, params::Params)
     @extract messages : N K ux mw
@@ -1092,7 +944,6 @@ function rsolve(N::Int, K::Int,
             #Σint = -Φ′ / (N * K) - γ * S
 
             println("it=$it pol=$pol y=$y β=$β (ok=$ok) S=$S βF=$βF Σᵢ=$Σint q=$q q̃=$q̃ Ẽ=$errs")
-            #println("  Σ2 = ", free_energy(messages, patterns, params, ws, γ) - γ * S)
             (ok || writeoutfile == :always) && outfile ≢ nothing && open(outfile, "a") do f
                 println(f, "$pol $y $β $S $q $q̃ $βF $Σint $errs")
             end
