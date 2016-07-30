@@ -2,6 +2,8 @@
 
 module BinaryCommitteeMachineFBP
 
+export focusingBP
+
 using StatsFuns
 using GZip
 using ExtractMacro
@@ -786,41 +788,39 @@ Base.start(s::FreeScoping) = start(s.list)
 Base.next(s::FreeScoping, i) = next(s.list, i)
 Base.done(s::FreeScoping, i) = done(s.list, i)
 
-function rsolve(N::Int, K::Int,
-                initpatt::Union{AbstractString, Tuple{Vec2,Vec}, Float64, Patterns},
-                ginitpatt::Union{AbstractString, Tuple{Vec2,Vec}, Float64, Patterns};
-                max_iters::Int = 1000,
-                max_epochs::Int = typemax(Int),
-                seed::Int = 1,
-                damping::Real = 0.0,
-                quiet::Bool = false,
-                accuracy1::Symbol = :accurate,
-                accuracy2::Symbol = :exact,
-                randfact::Float64 = 0.01,
-                iteration::IterationProtocol = StandardReinforcement(1e-2),
-                ϵ::Float64 = 1e-3,
-                initmessages::Union{Messages,Void,AbstractString} = nothing,
-                outatzero::Bool = true,
-                writeoutfile::Symbol = :auto, # note: ∈ [:auto, :always, :never]; auto => !outatzero && converged
-                outfile::Union{AbstractString,Void} = nothing, # note: "" => default, nothing => no output
-                outmessfiletmpl::Union{AbstractString,Void} = nothing) # note: same as outfile
+"""
+    focusingBP(N, K, patternspec; keywords...)
+
+
+"""
+function focusingBP(N::Int, K::Int,
+                    initpatt::Union{AbstractString, Tuple{Vec2,Vec}, Float64, Patterns};
+
+                    max_iters::Int = 1000,
+                    max_epochs::Int = typemax(Int),
+                    seed::Int = 1,
+                    damping::Real = 0.0,
+                    quiet::Bool = false,
+                    accuracy1::Symbol = :accurate,
+                    accuracy2::Symbol = :exact,
+                    randfact::Float64 = 0.01,
+                    iteration::IterationProtocol = StandardReinforcement(1e-2),
+                    ϵ::Float64 = 1e-3,
+                    initmessages::Union{Messages,Void,AbstractString} = nothing,
+                    outatzero::Bool = true,
+                    writeoutfile::Symbol = :auto, # note: ∈ [:auto, :always, :never]; auto => !outatzero && converged
+                    outfile::Union{AbstractString,Void} = nothing, # note: "" => default, nothing => no output
+                    outmessfiletmpl::Union{AbstractString,Void} = nothing) # note: same as outfile
 
     srand(seed)
 
     writeoutfile ∈ [:auto, :always, :never] || error("invalide writeoutfile, expected one of :auto, :always, :never, given: $writeoutfile")
 
     isa(initpatt, Float64) && (initpatt = (N, round(Int, K * N * initpatt)))
-    isa(ginitpatt, Float64) && (ginitpatt = (N, round(Int, K * N * ginitpatt)))
 
-    print("generating patterns... ")
-    print("T")
     patterns = Patterns(initpatt)
-    print("G")
-    gpatterns = Patterns(ginitpatt)
-    println(" done")
 
     M = patterns.M
-    gM = gpatterns.M
 
     messages::Messages = initmessages ≡ nothing ? Messages(M, N, K, randfact) :
                          isa(initmessages, AbstractString) ? read_messages(initmessages) :
@@ -835,7 +835,7 @@ function rsolve(N::Int, K::Int,
     outmessfiletmpl == "" && (outmessfiletmpl = "messages_BPCR_N$(N)_K$(K)_M$(M)_g%gamma%_s$(seed).txt.gz")
     lockfile = "bpcomm.lock"
     if outfile ≢ nothing && writeoutfile ∈ [:always, :auto]
-        println("writing outfile $outfile")
+        !quiet && println("writing outfile $outfile")
         exclusive(lockfile) do
             !isfile(outfile) && open(outfile, "w") do f
                 println(f, "#1=pol 2=y 3=β 4=S 5=q 6=q̃ 7=βF 8=𝓢ᵢₙₜ 9=Ẽ")
@@ -846,11 +846,11 @@ function rsolve(N::Int, K::Int,
     ok = true
     if initmessages ≢ nothing
         errs = nonbayes_test(messages, patterns)
-        println("initial errors = $errs")
+        !quiet && println("initial errors = $errs")
 
         outatzero && err == 0 && return 0
     end
-    println("mags overlaps=\n", mags_symmetry(messages))
+    !quiet && K > 1 && println("mags overlaps=\n", mags_symmetry(messages))
 
     it = 1
     for (γ,y,β) in iteration
@@ -861,7 +861,7 @@ function rsolve(N::Int, K::Int,
         params.β = β
         set_outfields!(messages, patterns.output, params.β)
         ok = converge!(messages, patterns, params)
-        println("mags overlaps=\n", mags_symmetry(messages))
+        !quiet && K > 1 && println("mags overlaps=\n", mags_symmetry(messages))
         errs = nonbayes_test(messages, patterns)
 
         if writeoutfile == :always || (writeoutfile == :auto && !outatzero)
@@ -871,16 +871,18 @@ function rsolve(N::Int, K::Int,
             βF = free_energy2(messages, patterns, params)
             Σint = -βF - γ * S
 
-            println("it=$it pol=$pol y=$y β=$β (ok=$ok) S=$S βF=$βF Σᵢ=$Σint q=$q q̃=$q̃ Ẽ=$errs")
-            (ok || writeoutfile == :always) && outfile ≢ nothing && open(outfile, "a") do f
-                println(f, "$pol $y $β $S $q $q̃ $βF $Σint $errs")
+            !quiet && println("it=$it pol=$pol y=$y β=$β (ok=$ok) S=$S βF=$βF Σᵢ=$Σint q=$q q̃=$q̃ Ẽ=$errs")
+            (ok || writeoutfile == :always) && outfile ≢ nothing && exclusive(lockfile) do
+                open(outfile, "a") do f
+                    println(f, "$pol $y $β $S $q $q̃ $βF $Σint $errs")
+                end
             end
             if outmessfiletmpl ≢ nothing
                 outmessfile = replace(outmessfiletmpl, "%gamma%", γ)
                 write_messages(outmessfile, messages)
             end
         else
-            println("it=$it pol=$pol y=$y β=$β (ok=$ok) Ẽ=$errs")
+            !quiet && println("it=$it pol=$pol y=$y β=$β (ok=$ok) Ẽ=$errs")
             errs == 0 && return 0, messages, patterns
         end
         it += 1
