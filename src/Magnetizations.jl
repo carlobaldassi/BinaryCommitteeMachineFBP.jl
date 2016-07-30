@@ -34,7 +34,6 @@ end
 reinforce(m0::Mag64, γ::Float64) = Mag64(tanh(atanh(m2f(m0)) * γ))
 
 damp(newx::Mag64, oldx::Mag64, λ::Float64) = f2m(m2f(newx) * (1 - λ) + m2f(oldx) * λ)
-#damp(newx::Mag64, oldx::Mag64, λ::Float64) = Mag64(Float64(newx) * (1 - λ) + Float64(oldx) * λ)
 
 (*)(x::Mag64, y::Mag64) = Mag64(Float64(x) * Float64(y))
 

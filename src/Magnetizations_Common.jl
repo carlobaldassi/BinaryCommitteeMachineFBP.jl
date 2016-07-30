@@ -19,9 +19,6 @@ convert(::Type{Mag64}, y::Real) = convert(Mag64, Float64(y))
 
 promote_rule(::Type{Mag64}, ::Type{Float64}) = Float64
 
-#mag(a::Real) = convert(Mag64, a)
-#mag{T<:Real}(v::Vector{T}) = Mag64[Mag64(x) for x in v]
-
 zero(::Type{Mag64}) = f2m(0.0)
 
 isnan(a::Mag64) = isnan(m2f(a))

@@ -58,44 +58,8 @@ function (*)(x::Mag64, y::Mag64)
     t2 = isinf(ax) || isinf(ay) ?
          0.0 : lr(ax + ay) - lr(ax - ay)
 
-    #if !isinf(ax) && !isinf(ay)
-    #    t1 = abs(ax + ay) - abs(ax - ay)
-    #    t2 = lr(ax + ay) - lr(ax - ay)
-    #elseif isinf(ax) && !isinf(ay)
-    #    t1 = 2 * sign(ax) * ay
-    #    t2 = 0.0
-    #elseif !isinf(ax) && isinf(ay)
-    #    t1 = 2 * sign(ay) * ax
-    #    t2 = 0.0
-    #else # isinf(ax) && isinf(ay)
-    #    t1 = 2 * sign(ax) * sign(ay) * mInf
-    #    t2 = 0.0
-    #end
-
     return f2m((t1 + t2) / 2)
 end
-
-#=function _atanherf_largex(x::Float64)
-    x² = x^2
-    t = 1/x²
-
-    return sign(x) * (2log(abs(x)) + log4π + 2x² +
-                      t * @evalpoly(t, 1, -1.25, 3.0833333333333335, -11.03125, 51.0125,
-                                   -287.5260416666667, 1906.689732142857, -14527.3759765625, 125008.12543402778, -1.1990066259765625e6)) / 4
-end
-
-function atanherf(x::Float64)
-    ax = abs(x)
-    ax ≤ 4 && return atanh(erf(x))
-    if 4 < ax ≤ 4.5 # maximum error with this is about 1.5e-8
-        v1 = atanh(erf(x))
-        v2 = _atanherf_largex(x)
-        return v1 * (4.5 - x) / 0.5 + v2 * (x - 4) / 0.5
-    else
-        return _atanherf_largex(x)
-    end
-
-end=#
 
 merf(x::Float64) = f2m(atanherf(x))
 
@@ -159,13 +123,6 @@ function erfmix(H::Mag64, m₊::Float64, m₋::Float64)
     aerf₊ = atanherf(m₊)
     aerf₋ = atanherf(m₋)
     return auxmix(H, aerf₊, aerf₋)
-#
-    #xH₊ = aH + aerf₊
-    #xH₋ = aH + aerf₋
-#
-    #t1 = abs(xH₊) - abs(aerf₊) - abs(xH₋) + abs(aerf₋)
-    #t2 = lr(xH₊) - lr(aerf₊) - lr(xH₋) + lr(aerf₋)
-    #return f2m((t1 + t2) / 2)
 end
 
 # log((1 + x * y) / 2)
