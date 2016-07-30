@@ -3,7 +3,6 @@
 module Util
 
 export exclusive,
-       fsign,
        @readmagvec, @dumpmagvecs,
        IVec, Vec, Vec2, MagVec, MagVec2, MagVec3
 
@@ -29,8 +28,6 @@ typealias Vec2 Vector{Vec}
 typealias MagVec Vector{Mag64}
 typealias MagVec2 Vector{MagVec}
 typealias MagVec3 Vector{MagVec2}
-
-fsign(x) = ifelse(signbit(x), -1.0, 1.0)
 
 macro readmagvec(l, fmt, vs...)
     ex = :()

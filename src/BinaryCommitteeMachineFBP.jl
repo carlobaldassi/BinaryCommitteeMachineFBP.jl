@@ -315,11 +315,6 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
             μ̄ = μ - ξi * hi
             σ̄² = σ² - (1-hi^2) * ξi^2
             sdσ̄² = √(2σ̄²)
-            #erf₊ = erf((μ̄ + ξi) / sdσ̄²)
-            #erf₋ = erf((μ̄ - ξi) / sdσ̄²)
-            #newu = vH * (erf₊ - erf₋) / (2 + vH * (erf₊ + erf₋))
-            #newu = Mag64(tanh((log1p(vH * erf₊) - log1p(vH * erf₋)) / 2))
-
             m₊ = (μ̄ + ξi) / sdσ̄²
             m₋ = (μ̄ - ξi) / sdσ̄²
             newu = erfmix(H, m₊, m₋)
@@ -346,8 +341,6 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
         @inbounds for i = 1:N
             vh[i] = h[i]
         end
-
-        #vH = Float64(H)
 
         leftC[1][1] = (1-ξ[1]*vh[1])/2
         leftC[1][2] = (1+ξ[1]*vh[1])/2
@@ -419,13 +412,11 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
                 end
             end
 
-            #newu = Mag64(ξi * pz * vH / (1 + (pp - pm) * vH))
             mp = Mag64(clamp(pp + ξi * pz - pm, -1.0, 1.0))
             mm = Mag64(clamp(pp - ξi * pz - pm, -1.0, 1.0))
             newu = exactmix(H, mp, mm)
 
             maxdiff = max(maxdiff, abs(newu - u[i]))
-            #u[i] = clamp(newu * (1-λ) + u[i] * λ, -1+1e-5, 1-1e-15)
             u[i] = damp(newu, u[i], λ)
             m[i] = h[i] ⊗ u[i]
 
@@ -445,13 +436,6 @@ function entro_node_update(m::Mag64, u::Mag64, params::Params)
         newu = ifelse(h == 0.0, zero(Mag64), copysign(pol, h))
     else
         newu::Mag64 = ((h * pol) ↑ r) * pol
-
-        # alternative version:
-        #
-        # hp = h * pol
-        # pp = (1 + hp)^r
-        # mm = (1 - hp)^r
-        # newu = pol * (pp - mm) / (pp + mm)
     end
 
     diff = abs(newu - u)
@@ -557,7 +541,6 @@ end
 let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), leftCs = Dict{Int,Vec2}(), rightCs = Dict{Int,Vec2}()
     global free_energy_theta
     function free_energy_theta(m::MagVec, M::Mag64, ξ::Vec, u::MagVec, U::Mag64)
-
         N = length(m)
         h = Base.@get!(hs, N, Array(Mag64, N))
         vh = Base.@get!(vhs, N, Array(Float64, N))
@@ -570,21 +553,16 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), leftCs = Dict{Int,Vec2}(), r
         @inbounds for i = 1:N
             vh[i] = h[i]
         end
-        #vH = Float64(H)
 
         σ = computeσ(vh, ξ)
         μ = dot(vh, ξ)
 
         b = merf(μ / σ)
 
-        #f -= log((1 + vH) / 2 * (1 + b) / 2 + (1 - vH) / 2 * (1 - b) / 2)
-        #f -= log((1 + vH * b) / 2)
         f -= log1pxy(H, b)
         @assert isfinite(f)
 
         for i = 1:N
-            #f += log((1+vh[i])/2 * (1+u[i])/2 + (1-vh[i])/2 * (1-u[i])/2)
-            #f += log((1 + vh[i] * u[i]) / 2)
             f += log1pxy(h[i], u[i])
         end
         return f
@@ -641,16 +619,12 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), leftCs = Dict{Int,Vec2}(), r
         z = (N+1) ÷ 2
         pm = sum(rightC[1][1:z])
         pp = sum(rightC[1][(z+1):end])
-        #@show pp + pm
 
-        #f -= log((1 + vH) / 2 * pp + (1 - vH) / 2 * pm)
         b = Mag64(pp, pm)
         f -= log1pxy(H, b)
         @assert isfinite(f)
 
         for i = 1:N
-            #f += log((1+vh[i])/2 * (1+u[i])/2 + (1-vh[i])/2 * (1-u[i])/2)
-            #f += log((1 + vh[i] * u[i]) / 2)
             f += log1pxy(h[i], u[i])
         end
         return f
@@ -673,37 +647,15 @@ function free_energy2(messages::Messages, patterns::Patterns, params::Params)
         f += free_energy_theta_exact(mτ1[a], mτ2[a], ones(K), uτ1[a], zero(Mag64))
     end
 
-    #zkip = [zeros(N) for k = 1:K]
-    #zkim = [zeros(N) for k = 1:K]
-    #for a = 1:M, k = 1:K, i = 1:N
-    #    zkip[k][i] += log((1 + uw[a][k][i]) / 2)
-    #    zkim[k][i] += log((1 - uw[a][k][i]) / 2)
-    #end
-
     for k = 1:K, i = 1:N
-        ## This is a simplified version, see BPerc.jl for "derivation"
-
-        ##zki = ((1 + ux[k][i]) * exp(zkip[k][i]) + (1 - ux[k][i]) * exp(zkim[k][i])) / 2
-        #zkip = log((1 + ux[k][i]) / 2)
-        #zkim = log((1 - ux[k][i]) / 2)
-        #for a = 1:M
-        #    zkip += log((1 + uw[a][k][i]) / 2)
-        #    zkim += log((1 - uw[a][k][i]) / 2)
-        #end
-        #zki = exp(zkip) + exp(zkim)
-        #f -= log(zki)
-
         f -= logZ(ux[k][i], Mag64[uw[a][k][i] for a = 1:M])
 
         f -= logtwo / 2
-        #f += log((1 - pol^2) / 2) / 2
         f += log1pxy(pol, -pol) / 2
         hkix = mw[k][i] ⊘ ux[k][i]
-        #f += log((1 + hkix * ux[k][i]) / 2)
         f += log1pxy(hkix, ux[k][i])
         hpol = hkix * pol
         mx = hpol ↑ (r + 1)
-        #f -= xlogy((1 + mx) / 2, (1 + hpol) / 2) + xlogy((1 - mx) / 2, (1 - hpol) / 2)
         f += mcrossentropy(mx, hpol)
     end
 
@@ -718,7 +670,6 @@ function compute_S(messages::Messages, params::Params)
         hkix = mw[k][i] ⊘ ux[k][i]
         hxki = (hkix * pol) ↑ r
         hh = hkix * hxki
-        #S += (hkix * hxki + pol) / (1 + hkix * hxki * pol)
         S += Float64(hh ⊗ pol)
     end
     return S / (N * K)
@@ -879,11 +830,9 @@ function rsolve(N::Int, K::Int,
     @assert messages.M == M
 
     params = Params(damping, ϵ, NaN, max_iters, accuracy1, accuracy2, 0.0, 0.0, 0.0, quiet)
-    #set_outfields!(messages, patterns.output, params.β)
 
     outfile == "" && (outfile = "results_BPCR_N$(N)_K$(K)_M$(M)_s$(seed).txt")
     outmessfiletmpl == "" && (outmessfiletmpl = "messages_BPCR_N$(N)_K$(K)_M$(M)_g%gamma%_s$(seed).txt.gz")
-    #outfile ≠ nothing && !force_overwrite && isfile(outfile) && error("file exists: $outfile")
     lockfile = "bpcomm.lock"
     if outfile ≢ nothing && writeoutfile ∈ [:always, :auto]
         println("writing outfile $outfile")
@@ -919,24 +868,8 @@ function rsolve(N::Int, K::Int,
             S = compute_S(messages, params)
             q = compute_q(messages)
             q̃ = compute_q̃(messages, params)
-
             βF = free_energy2(messages, patterns, params)
-            #βE = E == 0 ? 0.0 : β1 * E
-            Σint = -βF - γ * S #+ βE
-            #Σext = ext_entropy(messages, params)
-            #Ẽ = error_prob(messages, patterns, params)
-
-            #r = params.r
-            #δr = 1e-3
-            #Φ0 = free_entropy(messages, patterns, params)
-            #params.r += δr
-            #ok1 = converge!(messages, patterns, params)
-            #Φ1 = free_entropy(messages, patterns, params)
-            #params.r -= δr
-
-            #βF = Φ0 / (N * K * (r+2))
-            #Φ′ = (Φ1 - Φ0) / δr
-            #Σint = -Φ′ / (N * K) - γ * S
+            Σint = -βF - γ * S
 
             println("it=$it pol=$pol y=$y β=$β (ok=$ok) S=$S βF=$βF Σᵢ=$Σint q=$q q̃=$q̃ Ẽ=$errs")
             (ok || writeoutfile == :always) && outfile ≢ nothing && open(outfile, "a") do f
