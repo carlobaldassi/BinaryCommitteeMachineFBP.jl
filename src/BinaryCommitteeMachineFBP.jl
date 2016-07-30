@@ -848,7 +848,7 @@ function focusingBP(N::Int, K::Int,
         errs = nonbayes_test(messages, patterns)
         !quiet && println("initial errors = $errs")
 
-        outatzero && err == 0 && return 0
+        outatzero && errs == 0 && return errs, messages, patterns
     end
     !quiet && K > 1 && println("mags overlaps=\n", mags_symmetry(messages))
 
@@ -888,7 +888,7 @@ function focusingBP(N::Int, K::Int,
         it += 1
         it ≥ max_epochs && break
     end
-    return ok, messages, patterns
+    return errs, messages, patterns
 end
 
 end # module
