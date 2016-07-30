@@ -791,7 +791,85 @@ Base.done(s::FreeScoping, i) = done(s.list, i)
 """
     focusingBP(N, K, patternspec; keywords...)
 
+Run the Focusing Belief Propagation algorithm on a fully-connected committee machine with binary weights.
+`N` is the input (first layer) size, `K` the number of the hidden units (second layer size), and
+`patternspec` specifies how to build the patterns for the training set. Note that with the defult
+settings `K` must be odd (see notes for the `accuracy1` and `accuracy2` arguments below).
 
+Possible `patternspec` are:
+
+* a `Float64` number: this is interpreted as the `α` parameter, and `M = α*N*K` random ±1 patterns are generated.
+
+* a `Tuple` with `Vector{Vector{Float64}}` and a `Vector{Float64}`: these are the inputs and ssociated desired outputs.
+
+* a string: the patterns are read from a file (one input pattern per line, entries separated with the default
+            [`Base.split`](@ref) settings, outputs are assumed to be all 1).
+
+* a `Patterns` object (which could be the output of a previous run of the function).
+
+*Note*: all inputs and outputs must be ∈ {-1,1}.
+
+The keyword arguments are:
+
+* `max_iters` (default = `1000`): maximum number of BP iterations per step. If convergence is not achieved in this many iterations,
+                                  the algorithm proceeds to the next step.
+
+* `max_epochs` (default = `typemax(Int)`): maximum number of focusing steps.
+
+* `seed` (default = `1`): random seed.
+
+* `damping` (default = `0`): BP damping parameter (between `0` and `1`; `0` = no damping).
+
+* `quiet` (default = `false`): whether to print on screen
+
+* `accuracy1` (default = `:accurate`): accuracy of the messages computation at the hidden units level. Possible values are:
+                                       `:accurate` (Gaussian approximation, good for large `N`, works in `O(N)` time),
+                                       `:exact` (no approximation, uses convolutions, good for small `N`, works in `O(N³)` time, requires
+                                       `N` to be odd),
+                                       `:none` (a TAP-like approximation, fast but never very good, should probably be removed or done
+                                       properly...).
+
+* `accuracy2` (default = `:exact`): accuracy of the messages computation at the output node level.
+                                    See `accuracy1` (and think of `K` instead of `N`).
+
+* `randfact` (default = `0.01`): random factor used in the initialization of the messages. Must be between `0` and `1`. Large values are
+                                 not a good idea.
+
+* `iteration` (default = `StandardReinforcement(1e-2)`): focusing protocol specification. See [`IterationProtocol`](@ref).
+
+* `ϵ` (default = `1e-3`): convergence criterion: BP is assumed to have converged when the difference between messages in two successive
+                          iterations is smaller than this value. Reduce it (e.g. to 1e-6) for more precise results, while increasing
+                          `max_iters`.
+
+* `initmessages` (default = `nothing`): how to initialize the messages. If `nothing`, they are initialized randomly. If a string is given,
+                                        they are read from a file (see also [`read_messages`](@ref) and [`write_messages`](@ref)).
+                                        If a `Messages` object is given (e.g. one returned from an earlier run of the function) it is
+                                        used (and overwritten).
+
+* `outatzero` (default = `true`): if `true`, the algorithm exits as soon as a solution to the learning problem is found, without waiting
+                                  for the focusing protocol to terminate.
+
+* `writeoutfile` (default = `:auto`): whether to write results on an output file. Can be `:never`, `:always` or `:auto`. The latter means
+                                      that a file is written when `outatzero` is set to `false` and only when BP converges. It can make sense
+                                      setting this to `:always` even when `outfile` is `nothing` to force the computation of the local
+                                      entropy and other thermodynamic quantities.
+
+* `outfile` (default = `nothing`): the output file name. `nothing` means no output file is written. An empty string is means using a default
+                                   file name of the form: `"results_BPCR_N\$(N)_K\$(K)_M\$(M)_s\$(seed).txt"`.
+
+* `outmessfiletmpl` (default = `nothing`): template file name for writing the messages at each focusing step. The file name should include a
+                                           substring `"%gamma%"` which will be substituted with the value of the `γ` parameter at each step.
+                                           If `nothing`, it is not used. If empty, the default will be used:
+                                           `"messages_BPCR_N\$(N)_K\$(K)_M\$(M)_g%gamma%_s\$(seed).txt.gz"`.
+                                           *Note*: this can produce a lot of fairly large files!.
+
+The function returns three objects: the number of training errors, the messages and the patterns. The last two can be used as inputs to
+successive runs of the algorithms, as the `initmessages` keyword argument and the `patternspec` argument, respectively.
+
+Example of a run which solves a problem with `N * K = 1605` synapses with `K = 5` at `α = 0.3`:
+```
+julia> errs, messages, patterns = B.focusingBP(321, 5, 0.3, randfact=0.1, seed=135, max_iters=1, damping=0.5);
+```
 """
 function focusingBP(N::Int, K::Int,
                     initpatt::Union{AbstractString, Tuple{Vec2,Vec}, Float64, Patterns};
