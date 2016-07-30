@@ -59,9 +59,7 @@ immutable Messages
         mτ1 = [mflatp(K) for a = 1:M]
         uw = [MagVec[map(Mag64, x*(2*rand(N)-1)) for k = 1:K] for a = 1:M]
         Uτ1 = [mflatp(K) for a = 1:M]
-	#mτ2 = mrand(x, M)
-	mτ2 = mflatp(M)
-        #uτ1 = [x*(2*rand(K)-1) for a = 1:M]
+        mτ2 = mflatp(M)
         uτ1 = [mflatp(K) for a = 1:M]
 
         for k = 1:K, i = 1:N, a = 1:M
@@ -94,7 +92,6 @@ immutable Messages
         expected_lines = K + K + M + M*K + M + 1 + M + K
         for (i,l) in enumerate(eachline(io))
             i > expected_lines && (@assert strip(l) == "END"; break)
-            #@show i
             @readmagvec(l, fmt, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1)
         end
         @assert eof(io)
@@ -140,7 +137,7 @@ function Base.copy!(dest::Messages, src::Messages)
 end
 
 function set_outfields!(messages::Messages, output::Vector, β::Float64)
-    @extract messages N K M mτ2
+    @extract messages : N K M mτ2
     @assert length(output) == M
     t = tanh(β / 2)
     for a = 1:M
@@ -150,7 +147,7 @@ end
 
 print_mags(messages::Messages) = print_mags(STDOUT, messages)
 function print_mags(io::IO, messages::Messages)
-    @extract messages N K mw
+    @extract messages : N K mw
     for k = 1:K, i = 1:N
         @printf(io, "%i %i %.15f\n", k, i, Float64(mw[k][i]))
     end
@@ -240,7 +237,7 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
 
     global theta_node_update_approx!
     function theta_node_update_approx!(m::MagVec, M::Mag64, ξ::Vec, u::MagVec, U::Mag64, params::Params)
-        @extract params λ=damping
+        @extract params : λ=damping
 
         N = length(m)
         h = Base.@get!(hs, N, Array(Mag64, N))
@@ -278,7 +275,7 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
         @inbounds for i = 1:N
             ξi = ξ[i]
             hi = vh[i]
-            newu = Mag64(clamp(ξi * (p0 + ξi * (hi * pμ + ξi * (1-hi^2) * pσ)), -1+eps(-1.0), 1-eps(1.0))) # XXX mag
+            newu = Mag64(clamp(ξi * (p0 + ξi * (hi * pμ + ξi * (1-hi^2) * pσ)), -1+eps(-1.0), 1-eps(1.0))) # use mag-functions?
             maxdiff = max(maxdiff, abs(newu - u[i]))
             u[i] = damp(newu, u[i], λ)
             m[i] = h[i] ⊗ u[i]
@@ -289,7 +286,7 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
 
     global theta_node_update_accurate!
     function theta_node_update_accurate!(m::MagVec, M::Mag64, ξ::Vec, u::MagVec, U::Mag64, params::Params)
-        @extract params λ=damping
+        @extract params : λ=damping
 
         N = length(m)
         h = Base.@get!(hs, N, Array(Mag64, N))
@@ -335,7 +332,7 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
 
     global theta_node_update_exact!
     function theta_node_update_exact!(m::MagVec, M::Mag64, ξ::Vec, u::MagVec, U::Mag64, params::Params)
-        @extract params λ=damping
+        @extract params : λ=damping
 
         N = length(m)
         h = Base.@get!(hs, N, Array(Mag64, N))
@@ -439,7 +436,7 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
 end
 
 function entro_node_update(m::Mag64, u::Mag64, params::Params)
-    @extract params λ=damping r pol
+    @extract params : λ=damping r pol
 
     h = m ⊘ u
     if r == 0 || pol == 0
@@ -465,9 +462,9 @@ function entro_node_update(m::Mag64, u::Mag64, params::Params)
 end
 
 function iterate!(messages::Messages, patterns::Patterns, params::Params)
-    @extract messages N M K ux mw mτ1 uw Uτ1 mτ2 uτ1
-    @extract patterns X output
-    @extract params accuracy1 accuracy2
+    @extract messages : N M K ux mw mτ1 uw Uτ1 mτ2 uτ1
+    @extract patterns : X output
+    @extract params   : accuracy1 accuracy2
     maxdiff = 0.0
     tnu1! = accuracy1 == :exact ? theta_node_update_exact! :
             accuracy1 == :accurate ? theta_node_update_accurate! :
@@ -500,8 +497,7 @@ function iterate!(messages::Messages, patterns::Patterns, params::Params)
 end
 
 function converge!(messages::Messages, patterns::Patterns, params::Params)
-    @extract params ϵ max_iters λ₀=damping quiet
-    @extract patterns M
+    @extract params : ϵ max_iters λ₀=damping quiet
 
     λ = λ₀
     ok = false
@@ -552,8 +548,8 @@ function test(messages::Messages, patterns::Patterns)
 end
 
 function nonbayes_test(messages::Messages, patterns::Patterns)
-    @extract messages N K mw
-    @extract patterns X output
+    @extract messages : N K mw
+    @extract patterns : X output
     ws = [Float64[sign0(mw[k][i]) for i = 1:N] for k = 1:K]
     return test(ws, X, output)
 end
@@ -750,7 +746,7 @@ function compute_q(messages::Messages)
 end
 
 function mags_symmetry(messages::Messages)
-    @extract messages N K mw
+    @extract messages : N K mw
     overlaps = eye(K)
     qs = zeros(K)
     for k1 = 1:K
