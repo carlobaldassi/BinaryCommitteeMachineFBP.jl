@@ -77,10 +77,10 @@ immutable Messages
     global read_messages
     function read_messages(io::IO)
         l = split(readline(io))
-        @assert length(l) == 2 && l[1] == "fmt:"
+        length(l) == 2 && l[1] == "fmt:" || error("invalid messages file")
         fmt = Val{symbol(l[2])}
         l = split(readline(io))
-        @assert length(l) == 4 && l[1] == "N,K,M:"
+        length(l) == 4 && l[1] == "N,K,M:" || error("invalid messgaes file")
         N, K, M = parse(Int, l[2]), parse(Int, l[3]), parse(Int, l[4])
 
         ux = [mflatp(N) for k = 1:K]
@@ -93,10 +93,10 @@ immutable Messages
 
         expected_lines = K + K + M + M*K + M + 1 + M + K
         for (i,l) in enumerate(eachline(io))
-            i > expected_lines && (@assert strip(l) == "END"; break)
+            i > expected_lines && (strip(l) == "END" || error("invalid messages file"); break)
             @readmagvec(l, fmt, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1)
         end
-        @assert eof(io)
+        eof(io) || error("invalid messages file")
         return new(N, K, M, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1)
     end
 end
@@ -119,9 +119,9 @@ function write_messages(io::IO, messages::Messages)
 end
 
 function Base.copy!(dest::Messages, src::Messages)
-    @assert dest.N == src.N
-    @assert dest.K == src.K
-    @assert dest.M == src.M
+    dest.N == src.N || throw(ArgumentError("incompatible arguments: dest.N=$(dest.N) src.N=$(src.N)"))
+    dest.K == src.K || throw(ArgumentError("incompatible arguments: dest.K=$(dest.K) src.K=$(src.K)"))
+    dest.M == src.M || throw(ArgumentError("incompatible arguments: dest.M=$(dest.M) src.M=$(src.M)"))
     for k = 1:dest.K
         copy!(dest.ux[k], src.ux[k])
         copy!(dest.mw[k], src.mw[k])
@@ -172,7 +172,13 @@ immutable Patterns
     M::Int
     X::Vec2
     output::IVec
-    Patterns(X, o) = new(length(X), X, o)
+    function Patterns(X::AbstractVector, output::AbstractVector)
+        M = length(X)
+        length(output) == M || throw(ArgumentError("incompatible lengths of inputs and outputs: $M vs $(length(output))"))
+        all(ξ->all(ξi->abs(ξi) == 1, ξ), X) || throw(ArgumentError("inputs must be ∈ {-1,1}"))
+        all(o->abs(o) == 1, output) || throw(ArgumentError("outputs must be ∈ {-1,1}"))
+        new(M, X, output)
+    end
 end
 
 Patterns(Xo::Tuple{Vec2,Vec}) = Patterns(Xo...)
@@ -892,9 +898,24 @@ function focusingBP(N::Int, K::Int,
 
     srand(seed)
 
-    writeoutfile ∈ [:auto, :always, :never] || error("invalide writeoutfile, expected one of :auto, :always, :never, given: $writeoutfile")
+    N > 0 || throw(ArgumentError("N must be positive; given: $N"))
+    K > 0 || throw(ArgumentError("K must be positive; given: $K"))
 
-    isa(initpatt, Float64) && (initpatt = (N, round(Int, K * N * initpatt)))
+    writeoutfile ∈ [:auto, :always, :never] || error("invalide writeoutfile, expected one of :auto, :always, :never; given: $writeoutfile")
+    max_iters ≥ 0 || throw(ArgumentError("max_iters must be non-negative; given: $max_iters"))
+    max_epochs ≥ 0 || throw(ArgumentError("max_epochs must be non-negative; given: $max_epocs"))
+    0 ≤ damping < 1 || throw(ArgumentError("damping must be ∈ [0,1); given: $damping"))
+    0 ≤ randfact ≤ 1 || throw(ArgumentError("randfact must be ∈ [0,1]; given: $randfact"))
+    accuracy1 ∈ [:exact, :accurate, :none] || error("accuracy1 must be one of :exact, :accurate, :none; given: $accuracy1")
+    accuracy2 ∈ [:exact, :accurate, :none] || error("accuracy2 must be one of :exact, :accurate, :none; given: $accuracy2")
+
+    accuracy1 == :exact && iseven(N) && throw(ArgumentError("when accuracy1==:exact N must be odd, given: $N"))
+    accuracy2 == :exact && iseven(K) && throw(ArgumentError("when accuracy2==:exact K must be odd, given: $K"))
+
+    if isa(initpatt, Float64)
+        initpatt ≥ 0 || throw(ArgumentError("invalide negative initpatt; given: $initpatt"))
+        initpatt = (N, round(Int, K * N * initpatt))
+    end
 
     patterns = Patterns(initpatt)
 

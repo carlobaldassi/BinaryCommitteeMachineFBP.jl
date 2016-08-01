@@ -52,12 +52,12 @@ end
 function _readmagvec{F}(l::AbstractString, fmt::Type{Val{F}}, v::Array)
     sl = split(l)
     pre = sl[1]
-    @assert ismatch(r"^[^[]+(?:\[\d+\])*$", pre) pre
+    ismatch(r"^[^[]+(?:\[\d+\])*$", pre) || error("invalid messages file")
     inds = map(x->parse(Int,x), split(replace(pre, r"[][]", " "))[2:end])
     for i in inds
         v = v[i]
     end
-    @assert length(v) == length(sl) - 1
+    length(v) == length(sl) - 1 || error("invalid messages file")
     for i = 1:length(v)
         v[i] = parseinner(fmt, sl[i+1])
     end
