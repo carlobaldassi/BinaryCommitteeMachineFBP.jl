@@ -1026,7 +1026,7 @@ function focusingBP(N::Integer, K::Integer,
 
         outatzero && errs == 0 && return errs, messages, patterns
     end
-    !quiet && K > 1 && (println("mags overlaps=\n"); display(mags_symmetry(messages)[1]); println())
+    !quiet && K > 1 && (println("mags overlaps="); display(mags_symmetry(messages)[1]); println())
 
     it = 1
     for (γ,y,β) in fprotocol
@@ -1037,7 +1037,7 @@ function focusingBP(N::Integer, K::Integer,
         params.β = β
         set_outfields!(messages, patterns.output, params.β)
         ok = converge!(messages, patterns, params)
-        !quiet && K > 1 && (println("mags overlaps=\n"); display(mags_symmetry(messages)[1]); println())
+        !quiet && K > 1 && (println("mags overlaps="); display(mags_symmetry(messages)[1]); println())
         errs = nonbayes_test(messages, patterns)
 
         if writeoutfile == :always || (writeoutfile == :auto && !outatzero)
