@@ -61,7 +61,7 @@ immutable Messages{F<:Mag64}
 
 end
 
-function Messages{F<:Mag64}(::Type{F}, M::Int, N::Int, K::Int, x::Float64)
+function Messages{F<:Mag64}(::Type{F}, M::Integer, N::Integer, K::Integer, x::Real)
     ux = [mflatp(F, N) for k = 1:K]
     mw = [mflatp(F, N) for k = 1:K]
     mτ1 = [mflatp(F, K) for a = 1:M]
@@ -213,7 +213,7 @@ end
 
 Patterns(Xo::Tuple{Vec2,Vec}) = Patterns(Xo...)
 
-Patterns(NM::Tuple{Int,Int}) = ((N,M) = NM; Patterns([rand(-1.0:2.0:1.0, N) for a = 1:M], ones(M)))
+Patterns(NM::Tuple{Integer,Integer}) = ((N,M) = NM; Patterns([rand(-1.0:2.0:1.0, N) for a = 1:M], ones(M)))
 Patterns(patterns::Patterns) = deepcopy(patterns)
 
 function Patterns(patternsfile::AbstractString)
@@ -945,19 +945,19 @@ Example of a run which solves a problem with `N * K = 1605` synapses with `K = 5
 julia> errs, messages, patterns = B.focusingBP(321, 5, 0.3, randfact=0.1, seed=135, max_iters=1, damping=0.5);
 ```
 """
-function focusingBP(N::Int, K::Int,
-                    initpatt::Union{AbstractString, Tuple{Vec2,Vec}, Float64, Patterns};
+function focusingBP(N::Integer, K::Integer,
+                    initpatt::Union{AbstractString, Tuple{Vec2,Vec}, Real, Patterns};
 
-                    max_iters::Int = 1000,
-                    max_epochs::Int = typemax(Int),
-                    seed::Int = 1,
+                    max_iters::Integer = 1000,
+                    max_epochs::Integer = typemax(Int),
+                    seed::Integer = 1,
                     damping::Real = 0.0,
                     quiet::Bool = false,
                     accuracy1::Symbol = :accurate,
                     accuracy2::Symbol = :exact,
-                    randfact::Float64 = 0.01,
+                    randfact::Real = 0.01,
                     fprotocol::FocusingProtocol = StandardReinforcement(1e-2),
-                    ϵ::Float64 = 1e-3,
+                    ϵ::Real = 1e-3,
                     initmessages::Union{Messages,Symbol,AbstractString} = :tanh,
                     outatzero::Bool = true,
                     writeoutfile::Symbol = :auto, # note: ∈ [:auto, :always, :never]; auto => !outatzero && converged
@@ -980,7 +980,7 @@ function focusingBP(N::Int, K::Int,
     accuracy1 == :exact && iseven(N) && throw(ArgumentError("when accuracy1==:exact N must be odd, given: $N"))
     accuracy2 == :exact && iseven(K) && throw(ArgumentError("when accuracy2==:exact K must be odd, given: $K"))
 
-    if isa(initpatt, Float64)
+    if isa(initpatt, Real)
         initpatt ≥ 0 || throw(ArgumentError("invalide negative initpatt; given: $initpatt"))
         initpatt = (N, round(Int, K * N * initpatt))
     end
