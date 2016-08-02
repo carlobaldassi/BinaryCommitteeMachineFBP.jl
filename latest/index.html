@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Julia package BinaryCommitteeMachineFBP.jl">
+        <meta name="author" content="Carlo Baldassi">
+        
+        <link rel="shortcut icon" href="./img/favicon.ico">
+
+	<title>BinaryCommitteeMachineFBP.jl</title>
+
+        <link href="./css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="./css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link rel="stylesheet" href="./css/highlight.css">
+        <link href="./css/base.css" rel="stylesheet">
+        <link href="./assets/Documenter.css" rel="stylesheet">
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+        
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+
+            <!-- Main title -->
+            <a class="navbar-brand" href=".">BinaryCommitteeMachineFBP.jl</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            <!-- Main navigation -->
+            <ul class="nav navbar-nav">
+            
+            
+                <li class="active">
+                    <a href=".">Home</a>
+                </li>
+            
+            
+            </ul>
+
+            <!-- Search, Navigation and Repo links -->
+            <ul class="nav navbar-nav navbar-right">
+                <li>
+                    <a href="#" data-toggle="modal" data-target="#mkdocs_search_modal">
+                        <i class="fa fa-search"></i> Search
+                    </a>
+                </li>
+                <li class="disabled">
+                    <a rel="next" >
+                        <i class="fa fa-arrow-left"></i> Previous
+                    </a>
+                </li>
+                <li class="disabled">
+                    <a rel="prev" >
+                        Next <i class="fa fa-arrow-right"></i>
+                    </a>
+                </li>
+                
+                <li>
+                    <a href="https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl">
+                        
+                            <i class="fa fa-github"></i>
+                        
+                        GitHub
+                    </a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</div>
+
+        <div class="container">
+            <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#binarycommitteemachinefbpjl-documentation">BinaryCommitteeMachineFBP.jl documentation</a></li>
+        
+            <li><a href="#installation">Installation</a></li>
+        
+            <li><a href="#usage">Usage</a></li>
+        
+            <li><a href="#reading-and-writing-messages-files">Reading and writing messages files</a></li>
+        
+    
+    </ul>
+</div></div>
+            <div class="col-md-9" role="main">
+
+<p><a id='BinaryCommitteeMachineFBP.jl-documentation-1'></a></p>
+<h1 id="binarycommitteemachinefbpjl-documentation">BinaryCommitteeMachineFBP.jl documentation</h1>
+<p>This package implements the Focusing Belief Propagation algorithm for committee machines with binary weights described in the paper <a href="http://arxiv.org/abs/1605.06444">Unreasonable Effectiveness of Learning Neural Nets: Accessible States and Robust Ensembles</a> by Carlo Baldassi, Christian Borgs, Jennifer Chayes, Alessandro Ingrosso, Carlo Lucibello, Luca Saglietti and Riccardo Zecchina.</p>
+<p>The package is tested against Julia <code>0.4</code> and <em>current</em> <code>0.5-dev</code> on Linux, OS X, and Windows.</p>
+<p><a id='Installation-1'></a></p>
+<h3 id="installation">Installation</h3>
+<p>To install the module, use this command from within Julia:</p>
+<pre><code>julia&gt; Pkg.clone(&quot;https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl&quot;)
+</code></pre>
+
+<p>Dependencies will be installed automatically.</p>
+<p><a id='Usage-1'></a></p>
+<h3 id="usage">Usage</h3>
+<p>The module is loaded as any other Julia module:</p>
+<pre><code>julia&gt; using BinaryCommitteeMachineFBP
+</code></pre>
+
+<p>The code provides a main function, <a href=".#BinaryCommitteeMachineFBP.focusingBP"><code>focusingBP</code></a>, and some auxiliary functions and types, documented below.</p>
+<p><a id='BinaryCommitteeMachineFBP.focusingBP' href='#BinaryCommitteeMachineFBP.focusingBP'>#</a>
+<strong><code>BinaryCommitteeMachineFBP.focusingBP</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>focusingBP(N, K, patternspec; keywords...)
+</code></pre>
+
+<p>Run the Focusing Belief Propagation algorithm on a fully-connected committee machine with binary weights. <code>N</code> is the input (first layer) size, <code>K</code> the number of the hidden units (second layer size), and <code>patternspec</code> specifies how to build the patterns for the training set. Note that with the defult settings <code>K</code> must be odd (see notes for the <code>accuracy1</code> and <code>accuracy2</code> arguments below).</p>
+<p>Possible values of <code>patternspec</code> are:</p>
+<ul>
+<li>a <code>Float64</code> number: this is interpreted as the <code>α</code> parameter, and <code>M = α*N*K</code> random ±1 patterns are generated.</li>
+<li>a <code>Tuple</code> with <code>Vector{Vector{Float64}}</code> and a <code>Vector{Float64}</code>: these are the inputs and associated desired outputs.</li>
+<li>a string: the patterns are read from a file (one input pattern per line, entries separated by whitespace, outputs are             assumed to be all 1); the file can be gzipped.</li>
+<li>a <code>Patterns</code> object (which could be the output of a previous run of the function).</li>
+</ul>
+<p><em>Note</em>: all inputs and outputs must be ∈ {-1,1}.</p>
+<p>The keyword arguments are:</p>
+<ul>
+<li><code>max_iters</code> (default = <code>1000</code>): maximum number of BP iterations per step. If convergence is not achieved in this many iterations,                                   the algorithm proceeds to the next step.</li>
+<li><code>max_steps</code> (default = <code>typemax(Int)</code>): maximum number of focusing steps.</li>
+<li><code>seed</code> (default = <code>1</code>): random seed.</li>
+<li><code>damping</code> (default = <code>0</code>): BP damping parameter (between <code>0</code> and <code>1</code>; <code>0</code> = no damping).</li>
+<li><code>quiet</code> (default = <code>false</code>): whether to print on screen</li>
+<li><code>accuracy1</code> (default = <code>:accurate</code>): accuracy of the messages computation at the hidden units level. Possible values are:                                        <code>:accurate</code> (Gaussian approximation, good for large <code>N</code>, works in <code>O(N)</code> time),                                        <code>:exact</code> (no approximation, uses convolutions, good for small <code>N</code>, works in <code>O(N³)</code> time, requires                                        <code>N</code> to be odd),                                        <code>:none</code> (a TAP-like approximation, fast but never very good, should probably be removed or done                                        properly...).</li>
+<li><code>accuracy2</code> (default = <code>:exact</code>): accuracy of the messages computation at the output node level.                                     See <code>accuracy1</code> (and think of <code>K</code> instead of <code>N</code>).</li>
+<li><code>randfact</code> (default = <code>0.01</code>): random factor used in the initialization of the messages. Must be between <code>0</code> and <code>1</code>. Large values are                                  not a good idea.</li>
+<li><code>fprotocol</code> (default = <code>StandardReinforcement(1e-2)</code>): focusing protocol specification. See <a href=".#BinaryCommitteeMachineFBP.FocusingProtocol"><code>FocusingProtocol</code></a>.</li>
+<li><code>ϵ</code> (default = <code>1e-3</code>): convergence criterion: BP is assumed to have converged when the difference between messages in two successive                           iterations is smaller than this value. Reduce it (e.g. to 1e-6) for more precise results, while increasing                           <code>max_iters</code>.</li>
+<li><code>messfmt</code> (default = <code>:tanh</code>): internal storage format for messages: it can be either <code>:tanh</code> or <code>:plain</code>; <code>:tanh</code> is much more                                  precise but slower.</li>
+<li><code>initmess</code> (default = <code>nothing</code>): how to initialize the messages. If <code>nothing</code>, they are initialized randomly; If a string is given,                                     they are read from a file (see also <a href=".#BinaryCommitteeMachineFBP.read_messages"><code>read_messages</code></a> and <a href=".#BinaryCommitteeMachineFBP.write_messages"><code>write_messages</code></a>). If a                                     <code>Messages</code> object is given (e.g. one returned from an earlier run of the function, or from                                     <a href=".#BinaryCommitteeMachineFBP.read_messages"><code>read_messages</code></a>) it is used (and overwritten).</li>
+<li><code>outatzero</code> (default = <code>true</code>): if <code>true</code>, the algorithm exits as soon as a solution to the learning problem is found, without waiting                                   for the focusing protocol to terminate.</li>
+<li><code>writeoutfile</code> (default = <code>:auto</code>): whether to write results on an output file. Can be <code>:never</code>, <code>:always</code> or <code>:auto</code>. The latter means                                       that a file is written when <code>outatzero</code> is set to <code>false</code> and only when BP converges. It can make sense                                       setting this to <code>:always</code> even when <code>outfile</code> is <code>nothing</code> to force the computation of the local                                       entropy and other thermodynamic quantities.</li>
+<li><code>outfile</code> (default = <code>nothing</code>): the output file name. <code>nothing</code> means no output file is written. An empty string means using a default                                    file name of the form: <code>"results_BPCR_N$(N)_K$(K)_M$(M)_s$(seed).txt"</code>.</li>
+<li><code>outmessfiletmpl</code> (default = <code>nothing</code>): template file name for writing the messages at each focusing step. The file name should include a                                            substring <code>"%gamma%"</code> which will be substituted with the value of the <code>γ</code> parameter at each step.                                            If <code>nothing</code>, it is not used. If empty, the default will be used:                                            <code>"messages_BPCR_N$(N)_K$(K)_M$(M)_g%gamma%_s$(seed).txt.gz"</code>.                                            <em>Note</em>: this can produce a lot of fairly large files!.</li>
+</ul>
+<p>The function returns three objects: the number of training errors, the messages and the patterns. The last two can be used as inputs to successive runs of the algorithms, as the <code>initmessages</code> keyword argument and the <code>patternspec</code> argument, respectively.</p>
+<p>Example of a run which solves a problem with <code>N * K = 1605</code> synapses with <code>K = 5</code> at <code>α = 0.3</code>:</p>
+<pre><code>julia&gt; errs, messages, patterns = B.focusingBP(321, 5, 0.3, randfact=0.1, seed=135, max_iters=1, damping=0.5);
+</code></pre>
+
+<p><a id='Focusing-protocols-1'></a></p>
+<h4 id="focusing-protocols">Focusing protocols</h4>
+<p><a id='BinaryCommitteeMachineFBP.FocusingProtocol' href='#BinaryCommitteeMachineFBP.FocusingProtocol'>#</a>
+<strong><code>BinaryCommitteeMachineFBP.FocusingProtocol</code></strong> &mdash; <em>Type</em>.</p>
+<pre><code>FocusingProtocol
+</code></pre>
+
+<p>Abstract type representing a protocol for the focusing procedure, i.e. a way to produce successive values for the quantities <code>γ</code>, <code>y</code> and <code>β</code>. To be provided as argument to <a href=".#BinaryCommitteeMachineFBP.focusingBP"><code>focusingBP</code></a>. Currently, however, only <code>β=Inf</code> is supported.</p>
+<p>Available protocols are: <a href=".#BinaryCommitteeMachineFBP.StandardReinforcement"><code>StandardReinforcement</code></a>, <a href=".#BinaryCommitteeMachineFBP.Scoping"><code>Scoping</code></a>, <a href=".#BinaryCommitteeMachineFBP.PseudoReinforcement"><code>PseudoReinforcement</code></a> and <a href=".#BinaryCommitteeMachineFBP.FreeScoping"><code>FreeScoping</code></a>.</p>
+<p><a id='BinaryCommitteeMachineFBP.StandardReinforcement' href='#BinaryCommitteeMachineFBP.StandardReinforcement'>#</a>
+<strong><code>BinaryCommitteeMachineFBP.StandardReinforcement</code></strong> &mdash; <em>Type</em>.</p>
+<pre><code>StandardReinforcement(r::Range) &lt;: FocusingProtocol
+</code></pre>
+
+<p>Standard reinforcement protocol, returns <code>γ=Inf</code> and <code>y=1/(1-x)</code>, where <code>x</code> is taken from the given range <code>r</code>.</p>
+<p>See <a href=".#BinaryCommitteeMachineFBP.FocusingProtocol"><code>FocusingProtocol</code></a>.</p>
+<pre><code>StandardReinforcement(dr::Float64) &lt;: FocusingProtocol
+</code></pre>
+
+<p>Shorthand for <a href=".#BinaryCommitteeMachineFBP.StandardReinforcement"><code>StandardReinforcement</code></a><code>(0:dr:(1-dr))</code>.</p>
+<p><a id='BinaryCommitteeMachineFBP.Scoping' href='#BinaryCommitteeMachineFBP.Scoping'>#</a>
+<strong><code>BinaryCommitteeMachineFBP.Scoping</code></strong> &mdash; <em>Type</em>.</p>
+<pre><code>Scoping(γr::Range, y) &lt;: FocusingProtocol
+</code></pre>
+
+<p>Focusing protocol with fixed <code>y</code> and a varying <code>γ</code> taken from the given <code>γr</code> range.</p>
+<p>See <a href=".#BinaryCommitteeMachineFBP.FocusingProtocol"><code>FocusingProtocol</code></a>.</p>
+<p><a id='BinaryCommitteeMachineFBP.PseudoReinforcement' href='#BinaryCommitteeMachineFBP.PseudoReinforcement'>#</a>
+<strong><code>BinaryCommitteeMachineFBP.PseudoReinforcement</code></strong> &mdash; <em>Type</em>.</p>
+<pre><code>PseudoReinforcement(r::Range...; x=0.5) &lt;: FocusingProtocol
+</code></pre>
+
+<p>A focusing protocol in which both <code>γ</code> and <code>y</code> are progressively increased, according to the formulas</p>
+<pre><code class="julia">γ = atanh(ρ^x)
+y = 1+ρ^(1-2x)/(1-ρ)
+</code></pre>
+
+<p>where <code>ρ</code> is taken from the given range(s) <code>r</code>. With <code>x=0</code>, this is basically the same as <a href=".#BinaryCommitteeMachineFBP.StandardReinforcement"><code>StandardReinforcement</code></a> StandardReinforcement.</p>
+<p>See <a href=".#BinaryCommitteeMachineFBP.FocusingProtocol"><code>FocusingProtocol</code></a>.</p>
+<p><a id='BinaryCommitteeMachineFBP.FreeScoping' href='#BinaryCommitteeMachineFBP.FreeScoping'>#</a>
+<strong><code>BinaryCommitteeMachineFBP.FreeScoping</code></strong> &mdash; <em>Type</em>.</p>
+<pre><code>FreeScoping(list::Vector{NTuple{3,Float64}}) &lt;: FocusingProtocol
+</code></pre>
+
+<p>A focusing protocol which just returns the values of <code>(γ,y,β)</code> from the given <code>list</code>.</p>
+<p>See <a href=".#BinaryCommitteeMachineFBP.FocusingProtocol"><code>FocusingProtocol</code></a>.</p>
+<p><a id='Reading-and-writing-messages-files-1'></a></p>
+<h3 id="reading-and-writing-messages-files">Reading and writing messages files</h3>
+<p><a id='BinaryCommitteeMachineFBP.read_messages' href='#BinaryCommitteeMachineFBP.read_messages'>#</a>
+<strong><code>BinaryCommitteeMachineFBP.read_messages</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>read_messages(filename, mag_type)
+</code></pre>
+
+<p>Reads messages from a file. <code>mag_type</code> is the internal storage format used in the resulting <code>Messages</code> object, it can be either <code>MagT64</code> (uses tanhs, accurate but slower) or <code>MagP64</code> (plain format, faster but inaccurate).</p>
+<p>The file format is the one produced by <a href=".#BinaryCommitteeMachineFBP.write_messages"><code>write_messages</code></a>.</p>
+<p><a id='BinaryCommitteeMachineFBP.write_messages' href='#BinaryCommitteeMachineFBP.write_messages'>#</a>
+<strong><code>BinaryCommitteeMachineFBP.write_messages</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>write_messages(filename, messages)
+</code></pre>
+
+<p>Writes messages to a file. The messages can be read back with <a href=".#BinaryCommitteeMachineFBP.read_messages"><code>read_messages</code></a>. Note that the output is a plain text file compressed with gzip.</p></div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            
+            <center>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</center>
+        </footer>
+
+        <script src="./js/jquery-1.10.2.min.js"></script>
+        <script src="./js/bootstrap-3.0.3.min.js"></script>
+        <script src="./js/highlight.pack.js"></script>
+        <script>var base_url = '.';</script>
+        <script data-main="./mkdocs/js/search.js" src="./mkdocs/js/require.js"></script>
+        <script src="./js/base.js"></script>
+        <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script src="./assets/mathjaxhelper.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="Search Modal" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="exampleModalLabel">Search</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>
+                            From here you can search these documents. Enter
+                            your search terms below.
+                        </p>
+                        <form role="form">
+                            <div class="form-group">
+                                <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query">
+                            </div>
+                        </form>
+                        <div id="mkdocs-search-results"></div>
+                    </div>
+                    <div class="modal-footer">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
