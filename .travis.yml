@@ -8,7 +8,11 @@ julia:
   - nightly
 notifications:
   email: false
-# uncomment the following lines to override the default test script
-#script:
-#  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-#  - julia -e 'Pkg.clone(pwd()); Pkg.build("BinaryCommitteeMachineFBP"); Pkg.test("BinaryCommitteeMachineFBP"; coverage=true)'
+script:
+  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+  - julia --inline=no -e 'Pkg.clone(pwd()); Pkg.build("BinaryCommitteeMachineFBP"); Pkg.test("BinaryCommitteeMachineFBP"; coverage=true)'
+after_success:
+  - julia -e 'Pkg.add("Documenter", v"0.1.4")'
+  - julia -e 'cd(Pkg.dir("BinaryCommitteeMachineFBP")); include(joinpath("docs", "make.jl"))'
+  - julia -e 'Pkg.add("Coverage", v"0.3")'
+  - julia -e 'cd(Pkg.dir("BinaryCommitteeMachineFBP")); include(joinpath("docs", "coverage.jl"))'
