@@ -2,7 +2,9 @@
 
 module BinaryCommitteeMachineFBP
 
-export focusingBP
+export focusingBP, MagT64, MagP64,
+       read_messages, write_messages,
+       FocusingProtocol, StandardReinforcement, Scoping, PseudoReinforcement, FreeScoping
 
 using StatsFuns
 using GZip
@@ -918,11 +920,12 @@ The keyword arguments are:
 * `ϵ` (default = `1e-3`): convergence criterion: BP is assumed to have converged when the difference between messages in two successive
                           iterations is smaller than this value. Reduce it (e.g. to 1e-6) for more precise results, while increasing
                           `max_iters`.
-* `initmessages` (default = `:tanh`): how to initialize the messages. If a Symbol is given, they are initialized randomly; the Symbol
-                                      determines the internal storage format: it can be either `:tanh` or `:plain`; `:tanh` is much more
-                                      precise but slower. If a string is given, they are read from a file (see also [`read_messages`](@ref)
-                                      and [`write_messages`](@ref)).  If a `Messages` object is given (e.g. one returned from an earlier
-                                      run of the function, or from [`read_messages`](@ref)) it is used (and overwritten).
+* `messfmt` (default = `:tanh`): internal storage format for messages: it can be either `:tanh` or `:plain`; `:tanh` is much more
+                                 precise but slower.
+* `initmess` (default = `nothing`): how to initialize the messages. If `nothing`, they are initialized randomly; If a string is given,
+                                    they are read from a file (see also [`read_messages`](@ref) and [`write_messages`](@ref)). If a
+                                    `Messages` object is given (e.g. one returned from an earlier run of the function, or from
+                                    [`read_messages`](@ref)) it is used (and overwritten).
 * `outatzero` (default = `true`): if `true`, the algorithm exits as soon as a solution to the learning problem is found, without waiting
                                   for the focusing protocol to terminate.
 * `writeoutfile` (default = `:auto`): whether to write results on an output file. Can be `:never`, `:always` or `:auto`. The latter means
@@ -958,7 +961,8 @@ function focusingBP(N::Integer, K::Integer,
                     randfact::Real = 0.01,
                     fprotocol::FocusingProtocol = StandardReinforcement(1e-2),
                     ϵ::Real = 1e-3,
-                    initmessages::Union{Messages,Symbol,AbstractString} = :tanh,
+                    messfmt::Symbol = :tanh,
+                    initmess::Union{Messages,Void,AbstractString} = nothing,
                     outatzero::Bool = true,
                     writeoutfile::Symbol = :auto, # note: ∈ [:auto, :always, :never]; auto => !outatzero && converged
                     outfile::Union{AbstractString,Void} = nothing, # note: "" => default, nothing => no output
@@ -980,22 +984,21 @@ function focusingBP(N::Integer, K::Integer,
     accuracy1 == :exact && iseven(N) && throw(ArgumentError("when accuracy1==:exact N must be odd, given: $N"))
     accuracy2 == :exact && iseven(K) && throw(ArgumentError("when accuracy2==:exact K must be odd, given: $K"))
 
+    messfmt ∈ [:tanh, :plain] || throw(ArgumentError("invalid messfmt, should be :tanh or :plain; given: $messfmt"))
+    F = messfmt == :tanh ? MagT64 : MagP64
+
     if isa(initpatt, Real)
         initpatt ≥ 0 || throw(ArgumentError("invalide negative initpatt; given: $initpatt"))
         initpatt = (N, round(Int, K * N * initpatt))
-    end
-    if isa(initmessages, Symbol)
-        initmessages ∈ [:tanh, :plain] || throw(ArgumentError("invalid initmessages, only :tanh or :plain Symbols are allowed; given: $initmessages"))
-        F = initmessages == :tanh ? MagT64 : MagP64
     end
 
     patterns = Patterns(initpatt)
 
     M = patterns.M
 
-    messages::Messages = isa(initmessages, Symbol) ? Messages(F, M, N, K, randfact) :
-                         isa(initmessages, AbstractString) ? read_messages(initmessages) :
-                         initmessages
+    messages::Messages = initmess ≡ nothing ? Messages(F, M, N, K, randfact) :
+                         isa(initmess, AbstractString) ? read_messages(initmess, F) :
+                         initmess
 
     messages.N == N || throw(ArgumentError("wrong messages size, expected N=$N; given: $(messages.N)"))
     messages.K == K || throw(ArgumentError("wrong messages size, expected K=$K; given: $(messages.K)"))
@@ -1017,13 +1020,13 @@ function focusingBP(N::Integer, K::Integer,
     end
 
     ok = true
-    if !isa(initmessages, Symbol)
+    if initmess ≢ nothing
         errs = nonbayes_test(messages, patterns)
         !quiet && println("initial errors = $errs")
 
         outatzero && errs == 0 && return errs, messages, patterns
     end
-    !quiet && K > 1 && println("mags overlaps=\n", mags_symmetry(messages))
+    !quiet && K > 1 && (println("mags overlaps=\n"); display(mags_symmetry(messages)[1]); println())
 
     it = 1
     for (γ,y,β) in fprotocol
@@ -1034,7 +1037,7 @@ function focusingBP(N::Integer, K::Integer,
         params.β = β
         set_outfields!(messages, patterns.output, params.β)
         ok = converge!(messages, patterns, params)
-        !quiet && K > 1 && println("mags overlaps=\n", mags_symmetry(messages))
+        !quiet && K > 1 && (println("mags overlaps=\n"); display(mags_symmetry(messages)[1]); println())
         errs = nonbayes_test(messages, patterns)
 
         if writeoutfile == :always || (writeoutfile == :auto && !outatzero)
