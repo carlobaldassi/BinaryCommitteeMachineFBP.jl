@@ -222,7 +222,7 @@ function Patterns(patternsfile::AbstractString)
     X = Vec[]
     N = 0
     M = 0
-    open(patternsfile) do f
+    gzopen(patternsfile) do f
         M = 0
         for l in eachline(f)
             push!(X, map(float, split(l)))
@@ -893,7 +893,7 @@ Possible values of `patternspec` are:
 * a `Float64` number: this is interpreted as the `α` parameter, and `M = α*N*K` random ±1 patterns are generated.
 * a `Tuple` with `Vector{Vector{Float64}}` and a `Vector{Float64}`: these are the inputs and associated desired outputs.
 * a string: the patterns are read from a file (one input pattern per line, entries separated by whitespace, outputs are
-            assumed to be all 1).
+            assumed to be all 1); the file can be gzipped.
 * a `Patterns` object (which could be the output of a previous run of the function).
 
 *Note*: all inputs and outputs must be ∈ {-1,1}.
