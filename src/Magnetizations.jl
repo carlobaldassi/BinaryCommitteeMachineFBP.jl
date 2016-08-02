@@ -15,7 +15,7 @@ import Base: convert, promote_rule, *, /, +, -, sign, signbit, isnan,
 
 abstract Mag64
 
-m2f(a::Mag64) = box(Float64, unbox(Mag64, a))
+m2f{F<:Mag64}(a::F) = box(Float64, unbox(F, a))
 f2m{F<:Mag64}(::Type{F}, a::Float64) = box(F, unbox(Float64, a))
 
 convert{T<:Real}(::Type{T}, y::Mag64) = convert(T, Float64(y))
