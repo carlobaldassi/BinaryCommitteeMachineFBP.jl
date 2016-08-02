@@ -2,7 +2,7 @@
 
 module Util
 
-export exclusive,
+export exclusive, checkdims, chgeltype,
        @readmagvec, @dumpmagvecs,
        IVec, Vec, Vec2, MagVec, MagVec2, MagVec3
 
@@ -25,9 +25,30 @@ end
 typealias IVec Vector{Int}
 typealias Vec Vector{Float64}
 typealias Vec2 Vector{Vec}
-typealias MagVec Vector{Mag64}
-typealias MagVec2 Vector{MagVec}
-typealias MagVec3 Vector{MagVec2}
+typealias MagVec{M<:Mag64} Vector{M}
+typealias MagVec2{M<:Mag64} Vector{MagVec{M}}
+typealias MagVec3{M<:Mag64} Vector{MagVec2{M}}
+
+function checkdims{V<:AbstractArray}(x::AbstractArray{V}, N::Integer, r::Integer...)
+    @assert length(x) == N
+    @assert all(v->checkdims(v, r...), x)
+    return true
+end
+function checkdims(x::AbstractArray, N::Integer)
+    @assert length(x) == N
+    return true
+end
+checkdims{V<:AbstractArray}(x::AbstractArray{V}, N::Integer) = error("too few dimensions")
+checkdims(x::AbstractArray, N::Integer, r::Integer...) = error("not enough dimensions")
+
+changedeltype{V<:Vector,T}(::Type{Vector{V}}, ::Type{T}) = Vector{changedeltype(V, T)}
+changedeltype{X,T}(::Type{Vector{X}}, ::Type{T}) = Vector{T}
+
+function chgeltype{V<:Vector,T}(x::Vector{V}, ::Type{T})
+    eltype(changedeltype(typeof(x), T))[chgeltype(y, T) for y in x]
+end
+chgeltype{X,T}(x::Vector{X}, ::Type{T}) = convert(Vector{T}, x)
+
 
 macro readmagvec(l, fmt, vs...)
     ex = :()
@@ -43,7 +64,7 @@ macro readmagvec(l, fmt, vs...)
     end
     ex = quote
         $ex
-        error("unrecognized line $l")
+        error("unrecognized line: ", $(esc(l)))
         @label found
     end
     ex

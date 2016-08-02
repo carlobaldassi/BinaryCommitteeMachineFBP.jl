@@ -9,26 +9,16 @@ using GZip
 using ExtractMacro
 using Iterators
 
-const MAGFORMAT = isdefined(Main, :MAGFORMAT) ? Main.MAGFORMAT : :tanh
-MAGFORMAT ∈ [:plain, :tanh] || error("MAGFORMAT must be either :plain of :tanh, found: $(Main.MAGFORMAT)")
-
-if MAGFORMAT == :plain
-    info("BinaryCommitteeMachineFBP: using plain magnetizations")
-    include("Magnetizations.jl")
-    using .Magnetizations
-else
-    info("BinaryCommitteeMachineFBP: using tanh magnetizations")
-    include("MagnetizationsT.jl")
-    using .MagnetizationsT
-end
+include("Magnetizations.jl")
+using .Magnetizations
 
 include("Util.jl")
 using .Util
 
-immutable Messages
+immutable Messages{F<:Mag64}
+    M::Int
     N::Int
     K::Int
-    M::Int
 
     # 2 layers:
     #   0  --> external fields
@@ -46,62 +36,85 @@ immutable Messages
     #          also inputs to the second layer
     #   τ2 --> outputs from the second layer of perceptrons (M)
     #
-    #              DEPTH
-    ux::MagVec2    # 0
-    mw::MagVec2    # 0+1
-    mτ1::MagVec2   # 1+2
-    uw::MagVec3    # 1
-    Uτ1::MagVec2   # 1
-    mτ2::MagVec    # 2+
-    uτ1::MagVec2   # 2
+    #                 DEPTH
+    ux::MagVec2{F}    # 0
+    mw::MagVec2{F}    # 0+1
+    mτ1::MagVec2{F}   # 1+2
+    uw::MagVec3{F}    # 1
+    Uτ1::MagVec2{F}   # 1
+    mτ2::MagVec{F}    # 2+
+    uτ1::MagVec2{F}   # 2
 
-    function Messages(M::Int, N::Int, K::Int, x::Float64)
-        ux = [mflatp(N) for k = 1:K]
-        mw = [mflatp(N) for k = 1:K]
-        mτ1 = [mflatp(K) for a = 1:M]
-        uw = [MagVec[map(Mag64, x*(2*rand(N)-1)) for k = 1:K] for a = 1:M]
-        Uτ1 = [mflatp(K) for a = 1:M]
-        mτ2 = mflatp(M)
-        uτ1 = [mflatp(K) for a = 1:M]
-
-        for k = 1:K, i = 1:N, a = 1:M
-            mw[k][i] = mw[k][i] ⊗ uw[a][k][i]
+    function Messages(M::Int, N::Int, K::Int, ux::MagVec2{F}, mw::MagVec2{F}, mτ1::MagVec2{F}, uw::MagVec3{F},
+                      Uτ1::MagVec2{F}, mτ2::MagVec{F}, uτ1::MagVec2{F}; check::Bool = true)
+        if check
+            checkdims(ux, K, N)
+            checkdims(mw, K, N)
+            checkdims(mτ1, M, K)
+            checkdims(uw, M, K, N)
+            checkdims(Uτ1, M, K)
+            checkdims(mτ2, M)
+            checkdims(uτ1, M, K)
         end
-        for a = 1:M, k = 1:K
-            mτ1[a][k] = mτ1[a][k] ⊗ Uτ1[a][k] ⊗ uτ1[a][k]
-        end
-
-        new(N, K, M, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1)
+        new(M, N, K, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1)
     end
 
-    global read_messages
-    function read_messages(io::IO)
-        l = split(readline(io))
-        length(l) == 2 && l[1] == "fmt:" || error("invalid messages file")
-        fmt = Val{symbol(l[2])}
-        l = split(readline(io))
-        length(l) == 4 && l[1] == "N,K,M:" || error("invalid messgaes file")
-        N, K, M = parse(Int, l[2]), parse(Int, l[3]), parse(Int, l[4])
-
-        ux = [mflatp(N) for k = 1:K]
-        mw = [mflatp(N) for k = 1:K]
-        mτ1 = [mflatp(K) for a = 1:M]
-        uw = [[mflatp(N) for k = 1:K] for a = 1:M]
-        Uτ1 = [mflatp(K) for a = 1:M]
-        mτ2 = mflatp(M)
-        uτ1 = [mflatp(K) for a = 1:M]
-
-        expected_lines = K + K + M + M*K + M + 1 + M + K
-        for (i,l) in enumerate(eachline(io))
-            i > expected_lines && (strip(l) == "END" || error("invalid messages file"); break)
-            @readmagvec(l, fmt, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1)
-        end
-        eof(io) || error("invalid messages file")
-        return new(N, K, M, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1)
-    end
 end
 
-read_messages(filename::AbstractString) = gzopen(read_messages, filename, "r")
+function Messages{F<:Mag64}(::Type{F}, M::Int, N::Int, K::Int, x::Float64)
+    ux = [mflatp(F, N) for k = 1:K]
+    mw = [mflatp(F, N) for k = 1:K]
+    mτ1 = [mflatp(F, K) for a = 1:M]
+    uw = [MagVec{F}[map(F, x*(2*rand(N)-1)) for k = 1:K] for a = 1:M]
+    Uτ1 = [mflatp(F, K) for a = 1:M]
+    mτ2 = mflatp(F, M)
+    uτ1 = [mflatp(F, K) for a = 1:M]
+
+    for k = 1:K, i = 1:N, a = 1:M
+        mw[k][i] = mw[k][i] ⊗ uw[a][k][i]
+    end
+    for a = 1:M, k = 1:K
+        mτ1[a][k] = mτ1[a][k] ⊗ Uτ1[a][k] ⊗ uτ1[a][k]
+    end
+
+    return Messages{F}(M, N, K, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1, check=false)
+end
+
+Messages{F<:Mag64}(::Type{F}, messages::Messages{F}) = messages
+function Messages{F<:Mag64}(::Type{F}, messages::Messages)
+    @extract messages : M N K ux mw mτ1 uw Uτ1 mτ2 uτ1
+    return Messages{F}(M, N, K,
+                       chgeltype(ux, F), chgeltype(mw, F), chgeltype(mτ1, F), chgeltype(uw, F),
+                       chgeltype(Uτ1, F), chgeltype(mτ2, F), chgeltype(uτ1, F),
+                       check=false)
+end
+
+function read_messages{F<:Mag64}(io::IO, ::Type{F})
+    l = split(readline(io))
+    length(l) == 2 && l[1] == "fmt:" || error("invalid messages file")
+    fmt = Val{Symbol(l[2])}
+    l = split(readline(io))
+    length(l) == 4 && l[1] == "N,K,M:" || error("invalid messgaes file")
+    N, K, M = parse(Int, l[2]), parse(Int, l[3]), parse(Int, l[4])
+
+    ux = [mflatp(F, N) for k = 1:K]
+    mw = [mflatp(F, N) for k = 1:K]
+    mτ1 = [mflatp(F, K) for a = 1:M]
+    uw = [[mflatp(F, N) for k = 1:K] for a = 1:M]
+    Uτ1 = [mflatp(F, K) for a = 1:M]
+    mτ2 = mflatp(F, M)
+    uτ1 = [mflatp(F, K) for a = 1:M]
+
+    expected_lines = K + M + M*K + M + 1 + M + K
+    for (i,l) in enumerate(eachline(io))
+        i > expected_lines && (strip(l) == "END" || error("invalid messages file"); break)
+        @readmagvec(l, fmt, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1)
+    end
+    eof(io) || error("invalid messages file")
+    return Messages{F}(M, N, K, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1, check=false)
+end
+
+read_messages{F<:Mag64}(filename::AbstractString, ::Type{F}) = gzopen(io->read_messages(io, F), filename, "r")
 
 function write_messages(filename::AbstractString, messages::Messages)
     gzopen(filename, "w") do f
@@ -109,16 +122,18 @@ function write_messages(filename::AbstractString, messages::Messages)
     end
 end
 
-function write_messages(io::IO, messages::Messages)
+function write_messages{F<:Mag64}(io::IO, messages::Messages{F})
     @extract messages : N K M ux mw mτ1 uw Uτ1 mτ2 uτ1
 
-    println(io, "fmt: ", magformat())
+    println(io, "fmt: ", magformat(F))
     println(io, "N,K,M: $N $K $M")
     @dumpmagvecs(io, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1)
     println(io, "END")
 end
 
-function Base.copy!(dest::Messages, src::Messages)
+Base.eltype{F<:Mag64}(messages::Messages{F}) = F
+
+function Base.copy!{F<:Mag64}(dest::Messages{F}, src::Messages{F})
     dest.N == src.N || throw(ArgumentError("incompatible arguments: dest.N=$(dest.N) src.N=$(src.N)"))
     dest.K == src.K || throw(ArgumentError("incompatible arguments: dest.K=$(dest.K) src.K=$(src.K)"))
     dest.M == src.M || throw(ArgumentError("incompatible arguments: dest.M=$(dest.M) src.M=$(src.M)"))
@@ -138,12 +153,12 @@ function Base.copy!(dest::Messages, src::Messages)
     return dest
 end
 
-function set_outfields!(messages::Messages, output::Vector, β::Float64)
+function set_outfields!{F<:Mag64}(messages::Messages{F}, output::Vector, β::Float64)
     @extract messages : N K M mτ2
     @assert length(output) == M
     t = tanh(β / 2)
     for a = 1:M
-        mτ2[a] = forcedmag(output[a] * t) # forced avoids clamping
+        mτ2[a] = forcedmag(F, output[a] * t) # forced avoids clamping
     end
 end
 
@@ -155,7 +170,7 @@ function print_mags(io::IO, messages::Messages)
     end
 end
 
-type Params
+type Params{F<:Mag64}
     damping::Float64
     ϵ::Float64
     β::Float64
@@ -163,7 +178,7 @@ type Params
     accuracy1::Symbol
     accuracy2::Symbol
     r::Float64
-    pol::Mag64
+    pol::F
     dγ::Float64
     quiet::Bool
 end
@@ -241,14 +256,18 @@ function subfield!(h::MagVec, m::MagVec, u::MagVec)
     end
 end
 
-let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), vHs = Dict{Int,Vec}(), leftCs = Dict{Int,Vec2}(), rightCs = Dict{Int,Vec2}()
+let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Dict{Int,Vec}(),
+    vHs = Dict{Int,Vec}(), leftCs = Dict{Int,Vec2}(), rightCs = Dict{Int,Vec2}()
+
+    geth(::Type{MagT64}, N::Int) = Base.@get!(hsT, N, Array(MagT64, N))
+    geth(::Type{MagP64}, N::Int) = Base.@get!(hsP, N, Array(MagP64, N))
 
     global theta_node_update_approx!
-    function theta_node_update_approx!(m::MagVec, M::Mag64, ξ::Vec, u::MagVec, U::Mag64, params::Params)
+    function theta_node_update_approx!{F<:Mag64}(m::MagVec{F}, M::F, ξ::Vec, u::MagVec{F}, U::F, params::Params)
         @extract params : λ=damping
 
         N = length(m)
-        h = Base.@get!(hs, N, Array(Mag64, N))
+        h::MagVec{F} = geth(F, N)
         vh = Base.@get!(vhs, N, Array(Float64, N))
 
         subfield!(h, m, u)
@@ -265,7 +284,7 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
         μ = dot(vh, ξ)
 
         dσ² = 2σ²
-        newU = merf(μ / √dσ²)
+        newU = merf(F, μ / √dσ²)
 
         maxdiff = abs(U - newU)
         U = damp(newU, U, λ)
@@ -283,7 +302,7 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
         @inbounds for i = 1:N
             ξi = ξ[i]
             hi = vh[i]
-            newu = Mag64(clamp(ξi * (p0 + ξi * (hi * pμ + ξi * (1-hi^2) * pσ)), -1+eps(-1.0), 1-eps(1.0))) # use mag-functions?
+            newu = convert(F, clamp(ξi * (p0 + ξi * (hi * pμ + ξi * (1-hi^2) * pσ)), -1+eps(-1.0), 1-eps(1.0))) # use mag-functions?
             maxdiff = max(maxdiff, abs(newu - u[i]))
             u[i] = damp(newu, u[i], λ)
             m[i] = h[i] ⊗ u[i]
@@ -293,11 +312,11 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
     end
 
     global theta_node_update_accurate!
-    function theta_node_update_accurate!(m::MagVec, M::Mag64, ξ::Vec, u::MagVec, U::Mag64, params::Params)
+    function theta_node_update_accurate!{F<:Mag64}(m::MagVec{F}, M::F, ξ::Vec, u::MagVec{F}, U::F, params::Params)
         @extract params : λ=damping
 
         N = length(m)
-        h = Base.@get!(hs, N, Array(Mag64, N))
+        h::MagVec{F} = geth(F, N)
         vh = Base.@get!(vhs, N, Array(Float64, N))
 
         subfield!(h, m, u)
@@ -311,7 +330,7 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
         μ = dot(vh, ξ)
 
         dσ² = 2σ²
-        newU = merf(μ / √dσ²)
+        newU = merf(F, μ / √dσ²)
 
         maxdiff = 0.0
         U = damp(newU, U, λ)
@@ -334,11 +353,11 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
     end
 
     global theta_node_update_exact!
-    function theta_node_update_exact!(m::MagVec, M::Mag64, ξ::Vec, u::MagVec, U::Mag64, params::Params)
+    function theta_node_update_exact!{F<:Mag64}(m::MagVec{F}, M::F, ξ::Vec, u::MagVec{F}, U::F, params::Params)
         @extract params : λ=damping
 
         N = length(m)
-        h = Base.@get!(hs, N, Array(Mag64, N))
+        h::MagVec{F} = geth(F, N)
         vh = Base.@get!(vhs, N, Array(Float64, N))
         leftC = Base.@get!(leftCs, N, [zeros(i+1) for i = 1:N])
         rightC = Base.@get!(rightCs, N, [zeros((N-i+1)+1) for i = 1:N])
@@ -383,7 +402,7 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
         pm = sum(rightC[1][1:z])
         pp = sum(rightC[1][(z+1):end])
 
-        newU = Mag64(pp, pm)
+        newU = Mag64(F, pp, pm)
 
         @assert isfinite(newU)
 
@@ -420,8 +439,8 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
                 end
             end
 
-            mp = Mag64(clamp(pp + ξi * pz - pm, -1.0, 1.0))
-            mm = Mag64(clamp(pp - ξi * pz - pm, -1.0, 1.0))
+            mp = convert(F, clamp(pp + ξi * pz - pm, -1.0, 1.0))
+            mm = convert(F, clamp(pp - ξi * pz - pm, -1.0, 1.0))
             newu = exactmix(H, mp, mm)
 
             maxdiff = max(maxdiff, abs(newu - u[i]))
@@ -432,18 +451,110 @@ let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), newUs = Dict{Int,MagVec}(), 
         end
         return maxdiff, U, M
     end
+
+    global free_energy_theta
+    function free_energy_theta{F<:Mag64}(m::MagVec{F}, M::F, ξ::Vec, u::MagVec{F}, U::F)
+        N = length(m)
+        h::MagVec{F} = geth(F, N)
+        vh = Base.@get!(vhs, N, Array(Float64, N))
+
+        f = 0.0
+
+        subfield!(h, m, u)
+        H = M ⊘ U
+
+        @inbounds for i = 1:N
+            vh[i] = h[i]
+        end
+
+        σ = computeσ(vh, ξ)
+        μ = dot(vh, ξ)
+
+        b = merf(F, μ / σ)
+
+        f -= log1pxy(H, b)
+        @assert isfinite(f)
+
+        for i = 1:N
+            f += log1pxy(h[i], u[i])
+        end
+        return f
+    end
+
+    global free_energy_theta_exact
+    function free_energy_theta_exact{F<:Mag64}(m::MagVec{F}, M::F, ξ::Vec, u::MagVec{F}, U::F)
+
+        N = length(m)
+        h::MagVec{F} = geth(F, N)
+        vh = Base.@get!(vhs, N, Array(Float64, N))
+        leftC = Base.@get!(leftCs, N, [zeros(i+1) for i = 1:N])
+        rightC = Base.@get!(rightCs, N, [zeros((N-i+1)+1) for i = 1:N])
+
+        f = 0.0
+
+        subfield!(h, m, u)
+        H = M ⊘ U
+
+        @inbounds for i = 1:N
+            vh[i] = h[i]
+        end
+        vH = Float64(H)
+
+        leftC[1][1] = (1-ξ[1]*vh[1])/2
+        leftC[1][2] = (1+ξ[1]*vh[1])/2
+        for i = 2:N
+            lC0 = leftC[i-1]
+            lC = leftC[i]
+            hi = ξ[i] * vh[i]
+            lC[1] = lC0[1] * (1-hi)/2
+            for j = 2:i
+                lC[j] = lC0[j-1] * (1+hi)/2 + lC0[j] * (1-hi)/2
+            end
+            lC[end] = lC0[end] * (1+hi)/2
+        end
+
+        rightC[end][1] = (1-ξ[end]*vh[end])/2
+        rightC[end][2] = (1+ξ[end]*vh[end])/2
+        for i = (N-1):-1:1
+            rC0 = rightC[i+1]
+            rC = rightC[i]
+            hi = ξ[i] * vh[i]
+            rC[1] = rC0[1] * (1-hi)/2
+            for j = 2:(N-i+1)
+                rC[j] = rC0[j-1] * (1+hi)/2 + rC0[j] * (1-hi)/2
+            end
+            rC[end] = rC0[end] * (1+hi)/2
+        end
+
+        @assert maximum(abs(leftC[end] .- rightC[1])) ≤ 1e-10 (leftC[end], rightC[1])
+
+        @assert isodd(N)
+        z = (N+1) ÷ 2
+        pm = sum(rightC[1][1:z])
+        pp = sum(rightC[1][(z+1):end])
+
+        b = Mag64(F, pp, pm)
+        f -= log1pxy(H, b)
+        @assert isfinite(f)
+
+        for i = 1:N
+            f += log1pxy(h[i], u[i])
+        end
+        return f
+    end
+
 end
 
-function entro_node_update(m::Mag64, u::Mag64, params::Params)
+function entro_node_update{F<:Mag64}(m::F, u::F, params::Params{F})
     @extract params : λ=damping r pol
 
     h = m ⊘ u
     if r == 0 || pol == 0
-        newu = zero(Mag64)
+        newu = zero(F)
     elseif r == Inf
-        newu = ifelse(h == 0.0, zero(Mag64), copysign(pol, h))
+        newu = ifelse(h == 0.0, zero(F), copysign(pol, h))
     else
-        newu::Mag64 = ((h * pol) ↑ r) * pol
+        newu::F = ((h * pol) ↑ r) * pol
     end
 
     diff = abs(newu - u)
@@ -453,7 +564,7 @@ function entro_node_update(m::Mag64, u::Mag64, params::Params)
     return diff, newu, newm
 end
 
-function iterate!(messages::Messages, patterns::Patterns, params::Params)
+function iterate!{F<:Mag64}(messages::Messages{F}, patterns::Patterns, params::Params)
     @extract messages : N M K ux mw mτ1 uw Uτ1 mτ2 uτ1
     @extract patterns : X output
     @extract params   : accuracy1 accuracy2
@@ -473,7 +584,7 @@ function iterate!(messages::Messages, patterns::Patterns, params::Params)
                 diff, Uτ1[a][k], mτ1[a][k] = tnu1!(mw[k], mτ1[a][k], ξ, uw[a][k], Uτ1[a][k], params)
                 maxdiff = max(maxdiff, diff)
             end
-            diff, _, mτ2[a] = tnu2!(mτ1[a], mτ2[a], ones(K), uτ1[a], zero(Mag64) #=Uτ2[a]=#, params)
+            diff, _, mτ2[a] = tnu2!(mτ1[a], mτ2[a], ones(K), uτ1[a], zero(F), params)
             maxdiff = max(maxdiff, diff)
         else
             (params.r == 0 || params.pol == 0.0) && continue
@@ -546,101 +657,7 @@ function nonbayes_test(messages::Messages, patterns::Patterns)
     return test(ws, X, output)
 end
 
-let hs = Dict{Int,MagVec}(), vhs = Dict{Int,Vec}(), leftCs = Dict{Int,Vec2}(), rightCs = Dict{Int,Vec2}()
-    global free_energy_theta
-    function free_energy_theta(m::MagVec, M::Mag64, ξ::Vec, u::MagVec, U::Mag64)
-        N = length(m)
-        h = Base.@get!(hs, N, Array(Mag64, N))
-        vh = Base.@get!(vhs, N, Array(Float64, N))
-
-        f = 0.0
-
-        subfield!(h, m, u)
-        H = M ⊘ U
-
-        @inbounds for i = 1:N
-            vh[i] = h[i]
-        end
-
-        σ = computeσ(vh, ξ)
-        μ = dot(vh, ξ)
-
-        b = merf(μ / σ)
-
-        f -= log1pxy(H, b)
-        @assert isfinite(f)
-
-        for i = 1:N
-            f += log1pxy(h[i], u[i])
-        end
-        return f
-    end
-
-    global free_energy_theta_exact
-    function free_energy_theta_exact(m::MagVec, M::Mag64, ξ::Vec, u::MagVec, U::Mag64)
-
-        N = length(m)
-        h = Base.@get!(hs, N, Array(Mag64, N))
-        vh = Base.@get!(vhs, N, Array(Float64, N))
-        leftC = Base.@get!(leftCs, N, [zeros(i+1) for i = 1:N])
-        rightC = Base.@get!(rightCs, N, [zeros((N-i+1)+1) for i = 1:N])
-
-        f = 0.0
-
-        subfield!(h, m, u)
-        H = M ⊘ U
-
-        @inbounds for i = 1:N
-            vh[i] = h[i]
-        end
-        vH = Float64(H)
-
-        leftC[1][1] = (1-ξ[1]*vh[1])/2
-        leftC[1][2] = (1+ξ[1]*vh[1])/2
-        for i = 2:N
-            lC0 = leftC[i-1]
-            lC = leftC[i]
-            hi = ξ[i] * vh[i]
-            lC[1] = lC0[1] * (1-hi)/2
-            for j = 2:i
-                lC[j] = lC0[j-1] * (1+hi)/2 + lC0[j] * (1-hi)/2
-            end
-            lC[end] = lC0[end] * (1+hi)/2
-        end
-
-        rightC[end][1] = (1-ξ[end]*vh[end])/2
-        rightC[end][2] = (1+ξ[end]*vh[end])/2
-        for i = (N-1):-1:1
-            rC0 = rightC[i+1]
-            rC = rightC[i]
-            hi = ξ[i] * vh[i]
-            rC[1] = rC0[1] * (1-hi)/2
-            for j = 2:(N-i+1)
-                rC[j] = rC0[j-1] * (1+hi)/2 + rC0[j] * (1-hi)/2
-            end
-            rC[end] = rC0[end] * (1+hi)/2
-        end
-
-        @assert maximum(abs(leftC[end] .- rightC[1])) ≤ 1e-10 (leftC[end], rightC[1])
-
-        @assert isodd(N)
-        z = (N+1) ÷ 2
-        pm = sum(rightC[1][1:z])
-        pp = sum(rightC[1][(z+1):end])
-
-        b = Mag64(pp, pm)
-        f -= log1pxy(H, b)
-        @assert isfinite(f)
-
-        for i = 1:N
-            f += log1pxy(h[i], u[i])
-        end
-        return f
-    end
-end
-
-# used with pseudo-reinforcement.
-function free_energy2(messages::Messages, patterns::Patterns, params::Params)
+function free_energy{F<:Mag64}(messages::Messages{F}, patterns::Patterns, params::Params{F})
     @extract messages : M N K ux mw mτ1 uw Uτ1 mτ2 uτ1
     @extract patterns : X output
     @extract params   : r pol
@@ -652,11 +669,11 @@ function free_energy2(messages::Messages, patterns::Patterns, params::Params)
         for k = 1:K
             f += free_energy_theta(mw[k], mτ1[a][k], ξ, uw[a][k], Uτ1[a][k])
         end
-        f += free_energy_theta_exact(mτ1[a], mτ2[a], ones(K), uτ1[a], zero(Mag64))
+        f += free_energy_theta_exact(mτ1[a], mτ2[a], ones(K), uτ1[a], zero(F))
     end
 
     for k = 1:K, i = 1:N
-        f -= logZ(ux[k][i], Mag64[uw[a][k][i] for a = 1:M])
+        f -= logZ(ux[k][i], F[uw[a][k][i] for a = 1:M])
 
         f -= logtwo / 2
         f += log1pxy(pol, -pol) / 2
@@ -670,7 +687,7 @@ function free_energy2(messages::Messages, patterns::Patterns, params::Params)
     return f / (N * K)
 end
 
-function compute_S(messages::Messages, params::Params)
+function compute_S{F<:Mag64}(messages::Messages{F}, params::Params{F})
     @extract messages : N K ux mw
     @extract params   : r pol
     S = 0.0
@@ -683,7 +700,7 @@ function compute_S(messages::Messages, params::Params)
     return S / (N * K)
 end
 
-function compute_q̃(messages::Messages, params::Params)
+function compute_q̃{F<:Mag64}(messages::Messages{F}, params::Params{F})
     @extract messages : N K ux mw
     @extract params   : r pol
     q̃ = 0.0
@@ -847,10 +864,11 @@ The keyword arguments are:
                           iterations is smaller than this value. Reduce it (e.g. to 1e-6) for more precise results, while increasing
                           `max_iters`.
 
-* `initmessages` (default = `nothing`): how to initialize the messages. If `nothing`, they are initialized randomly. If a string is given,
-                                        they are read from a file (see also [`read_messages`](@ref) and [`write_messages`](@ref)).
-                                        If a `Messages` object is given (e.g. one returned from an earlier run of the function) it is
-                                        used (and overwritten).
+* `initmessages` (default = `:tanh`): how to initialize the messages. If a Symbol is given, they are initialized randomly; the Symbol
+                                      determines the internal storage format: it can be either `:tanh` or `:plain`; `:tanh` is much more
+                                      precise but slower. If a string is given, they are read from a file (see also [`read_messages`](@ref)
+                                      and [`write_messages`](@ref)).  If a `Messages` object is given (e.g. one returned from an earlier
+                                      run of the function, or from [`read_messages`](@ref)) it is used (and overwritten).
 
 * `outatzero` (default = `true`): if `true`, the algorithm exits as soon as a solution to the learning problem is found, without waiting
                                   for the focusing protocol to terminate.
@@ -890,7 +908,7 @@ function focusingBP(N::Int, K::Int,
                     randfact::Float64 = 0.01,
                     iteration::IterationProtocol = StandardReinforcement(1e-2),
                     ϵ::Float64 = 1e-3,
-                    initmessages::Union{Messages,Void,AbstractString} = nothing,
+                    initmessages::Union{Messages,Symbol,AbstractString} = :tanh,
                     outatzero::Bool = true,
                     writeoutfile::Symbol = :auto, # note: ∈ [:auto, :always, :never]; auto => !outatzero && converged
                     outfile::Union{AbstractString,Void} = nothing, # note: "" => default, nothing => no output
@@ -916,19 +934,25 @@ function focusingBP(N::Int, K::Int,
         initpatt ≥ 0 || throw(ArgumentError("invalide negative initpatt; given: $initpatt"))
         initpatt = (N, round(Int, K * N * initpatt))
     end
+    if isa(initmessages, Symbol)
+        initmessages ∈ [:tanh, :plain] || throw(ArgumentError("invalid initmessages, only :tanh or :plain Symbols are allowed; given: $initmessages"))
+        F = initmessages == :tanh ? MagT64 : MagP64
+    end
 
     patterns = Patterns(initpatt)
 
     M = patterns.M
 
-    messages::Messages = initmessages ≡ nothing ? Messages(M, N, K, randfact) :
+    messages::Messages = isa(initmessages, Symbol) ? Messages(F, M, N, K, randfact) :
                          isa(initmessages, AbstractString) ? read_messages(initmessages) :
                          initmessages
-    @assert messages.N == N
-    @assert messages.K == K
-    @assert messages.M == M
 
-    params = Params(damping, ϵ, NaN, max_iters, accuracy1, accuracy2, 0.0, 0.0, 0.0, quiet)
+    messages.N == N || throw(ArgumentError("wrong messages size, expected N=$N; given: $(messages.N)"))
+    messages.K == K || throw(ArgumentError("wrong messages size, expected K=$K; given: $(messages.K)"))
+    messages.M == M || throw(ArgumentError("wrong messages size, expected M=$M; given: $(messages.M)"))
+    F = eltype(messages)
+
+    params = Params{F}(damping, ϵ, NaN, max_iters, accuracy1, accuracy2, 0.0, 0.0, 0.0, quiet)
 
     outfile == "" && (outfile = "results_BPCR_N$(N)_K$(K)_M$(M)_s$(seed).txt")
     outmessfiletmpl == "" && (outmessfiletmpl = "messages_BPCR_N$(N)_K$(K)_M$(M)_g%gamma%_s$(seed).txt.gz")
@@ -943,7 +967,7 @@ function focusingBP(N::Int, K::Int,
     end
 
     ok = true
-    if initmessages ≢ nothing
+    if !isa(initmessages, Symbol)
         errs = nonbayes_test(messages, patterns)
         !quiet && println("initial errors = $errs")
 
@@ -954,7 +978,7 @@ function focusingBP(N::Int, K::Int,
     it = 1
     for (γ,y,β) in iteration
         isfinite(β) && error("finite β not supported (needs energy computation in freeenergy2, see BPPerc.jl); given: $β")
-        pol = mtanh(γ)
+        pol = mtanh(F, γ)
         params.pol = pol
         params.r = y - 1
         params.β = β
@@ -967,7 +991,7 @@ function focusingBP(N::Int, K::Int,
             S = compute_S(messages, params)
             q = compute_q(messages)
             q̃ = compute_q̃(messages, params)
-            βF = free_energy2(messages, patterns, params)
+            βF = free_energy(messages, patterns, params)
             Σint = -βF - γ * S
 
             !quiet && println("it=$it pol=$pol y=$y β=$β (ok=$ok) S=$S βF=$βF Σᵢ=$Σint q=$q q̃=$q̃ Ẽ=$errs")

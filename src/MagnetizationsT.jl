@@ -1,47 +1,46 @@
 # This file is a part of BinaryCommitteeMachineFBP.jl. License is MIT: http://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/LICENCE.md
 
-module MagnetizationsT
-
 using StatsFuns
 
-bitstype 64 Mag64
+bitstype 64 MagT64 <: Mag64
 
-include("Magnetizations_Common.jl")
+f2mT(a::Float64) = f2m(MagT64, a)
 
 include("AtanhErf.jl")
 using .AtanhErf
 
 const mInf = 30.0
 
-magformat() = :tanh
+magformat(::Type{MagT64}) = :tanh
+parseinner(::Type{Val{:tanh}}, s::AbstractString) = mtanh(MagT64, parse(Float64, s))
 
-convert(::Type{Mag64}, y::Float64) = f2m(clamp(atanh(y), -mInf, mInf))
-convert(::Type{Float64}, y::Mag64) = tanh(m2f(y))
+convert(::Type{MagT64}, y::Float64) = f2mT(clamp(atanh(y), -mInf, mInf))
+convert(::Type{Float64}, y::MagT64) = tanh(m2f(y))
 
-forcedmag(y::Float64) = f2m(atanh(y))
+forcedmag(::Type{MagT64}, y::Float64) = f2mT(atanh(y))
 
-mtanh(x::Float64) = f2m(x)
-atanh(x::Mag64) = m2f(x)
+mtanh(::Type{MagT64}, x::Float64) = f2mT(x)
+atanh(x::MagT64) = m2f(x)
 
-Mag64(pp::Real, pm::Real) = f2m(clamp((log(pp) - log(pm)) / 2, -mInf, mInf))
+MagT64(pp::Real, pm::Real) = f2mT(clamp((log(pp) - log(pm)) / 2, -mInf, mInf))
 
-isfinite(a::Mag64) = !isnan(m2f(a))
+isfinite(a::MagT64) = !isnan(m2f(a))
 
-⊗(a::Mag64, b::Mag64) = f2m(m2f(a) + m2f(b))
-function ⊘(a::Mag64, b::Mag64)
+⊗(a::MagT64, b::MagT64) = f2mT(m2f(a) + m2f(b))
+function ⊘(a::MagT64, b::MagT64)
     xa = m2f(a)
     xb = m2f(b)
-    return f2m(ifelse(xa == xb, 0.0, xa - xb))
+    return f2mT(ifelse(xa == xb, 0.0, xa - xb))
 end
 
-reinforce(m0::Mag64, γ::Float64) = f2m(m2f(m0) * γ)
+reinforce(m0::MagT64, γ::Float64) = f2mT(m2f(m0) * γ)
 
-damp(newx::Mag64, oldx::Mag64, λ::Float64) = f2m(m2f(newx) * (1 - λ) + m2f(oldx) * λ)
+damp(newx::MagT64, oldx::MagT64, λ::Float64) = f2mT(m2f(newx) * (1 - λ) + m2f(oldx) * λ)
 
 lr(x::Float64) = log1p(exp(-2abs(x)))
 log2cosh(x::Float64) = abs(x) + lr(x)
 
-function (*)(x::Mag64, y::Mag64)
+function (*)(x::MagT64, y::MagT64)
     ax = m2f(x)
     ay = m2f(y)
 
@@ -58,15 +57,15 @@ function (*)(x::Mag64, y::Mag64)
     t2 = isinf(ax) || isinf(ay) ?
          0.0 : lr(ax + ay) - lr(ax - ay)
 
-    return f2m((t1 + t2) / 2)
+    return f2mT((t1 + t2) / 2)
 end
 
-merf(x::Float64) = f2m(atanherf(x))
+merf(::Type{MagT64}, x::Float64) = f2mT(atanherf(x))
 
-function auxmix(H::Mag64, a₊::Float64, a₋::Float64)
+function auxmix(H::MagT64, a₊::Float64, a₋::Float64)
     aH = m2f(H)
 
-    aH == 0.0 && return f2m(0.0)
+    aH == 0.0 && return f2mT(0.0)
 
     xH₊ = aH + a₊
     xH₋ = aH + a₋
@@ -114,19 +113,19 @@ function auxmix(H::Mag64, a₊::Float64, a₋::Float64)
         t2 = lr(xH₊) - lr(a₊) - lr(xH₋) + lr(a₋)
     end
 
-    return f2m((t1 + t2) / 2)
+    return f2mT((t1 + t2) / 2)
 end
 
-exactmix(H::Mag64, p₊::Mag64, p₋::Mag64) = auxmix(H, m2f(p₊), m2f(p₋))
+exactmix(H::MagT64, p₊::MagT64, p₋::MagT64) = auxmix(H, m2f(p₊), m2f(p₋))
 
-function erfmix(H::Mag64, m₊::Float64, m₋::Float64)
+function erfmix(H::MagT64, m₊::Float64, m₋::Float64)
     aerf₊ = atanherf(m₊)
     aerf₋ = atanherf(m₋)
     return auxmix(H, aerf₊, aerf₋)
 end
 
 # log((1 + x * y) / 2)
-function log1pxy(x::Mag64, y::Mag64)
+function log1pxy(x::MagT64, y::MagT64)
     ax = m2f(x)
     ay = m2f(y)
 
@@ -145,14 +144,14 @@ end
 # with atanh's:
 #
 # == -ay * tanh(ax) + log(2cosh(ay))
-function mcrossentropy(x::Mag64, y::Mag64)
+function mcrossentropy(x::MagT64, y::MagT64)
     tx = tanh(m2f(x))
     ay = m2f(y)
     return !isinf(ay)          ? -abs(ay) * (sign0(ay) * tx - 1) + lr(ay) :
            sign(tx) ≠ sign(ay) ? Inf : 0.0
 end
 
-function logZ(u0::Mag64, u::Vector{Mag64})
+function logZ(u0::MagT64, u::Vector{MagT64})
     a0 = m2f(u0)
     if !isinf(a0)
         s1 = a0
@@ -176,6 +175,4 @@ function logZ(u0::Mag64, u::Vector{Mag64})
         end
     end
     return abs(s1) - s2 + lr(s1) - s3
-end
-
 end
