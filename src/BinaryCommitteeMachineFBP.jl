@@ -759,12 +759,35 @@ function mags_symmetry(messages::Messages)
     return overlaps, qs / N
 end
 
-abstract IterationProtocol
+"""
+    FocusingProtocol
 
-immutable StandardReinforcement <: IterationProtocol
+Abstract type representing a protocol for the focusing procedure, i.e. a way to produce
+successive values for the quantities `γ`, `y` and `β`. To be provided as argument to
+[`focusingBP`](@ref). Currently, however, only `β=Inf` is supported.
+
+Available protocols are: [`StandardReinforcement`](@ref), [`Scoping`](@ref), [`PseudoReinforcement`](@ref) and
+[`FreeScoping`](@ref).
+"""
+abstract FocusingProtocol
+
+@doc """
+    StandardReinforcement(r::Range) <: FocusingProtocol
+
+Standard reinforcement protocol, returns `γ=Inf` and `y=1/(1-x)`, where `x` is taken from the given range `r`.
+
+See [`FocusingProtocol`](@ref).
+""" -> StandardReinforcement(r::Range)
+immutable StandardReinforcement <: FocusingProtocol
     r::FloatRange{Float64}
     StandardReinforcement{T<:Real}(r::Range{T}) = new(r)
 end
+
+"""
+    StandardReinforcement(dr::Float64) <: FocusingProtocol
+
+Shorthand for [`StandardReinforcement`](@ref)`(0:dr:(1-dr))`.
+"""
 StandardReinforcement(dr::Float64) = StandardReinforcement(0.0:dr:(1-dr))
 
 Base.start(s::StandardReinforcement) = start(s.r)
@@ -774,22 +797,44 @@ function Base.next(s::StandardReinforcement, i)
 end
 Base.done(s::StandardReinforcement, i) = done(s.r, i)
 
-immutable Scoping <: IterationProtocol
+"""
+    Scoping(γr::Range, y) <: FocusingProtocol
+
+Focusing protocol with fixed `y` and a varying `γ` taken from the given `γr` range.
+
+See [`FocusingProtocol`](@ref).
+"""
+immutable Scoping <: FocusingProtocol
     γr::FloatRange{Float64}
     y::Float64
-    β::Float64
-    Scoping(γr::Range, y, β=Inf) = new(γr, y, β)
+    Scoping(γr::Range, y) = new(γr, y)
 end
 
 Base.start(s::Scoping) = start(s.γr)
 function Base.next(s::Scoping, i)
     n = next(s.γr, i)
-    return (n[1], s.y, s.β), n[2]
+    return (n[1], s.y, Inf), n[2]
 end
 Base.done(s::Scoping, i) = done(s.γr, i)
 
 
-immutable PseudoReinforcement <: IterationProtocol
+"""
+    PseudoReinforcement(r::Range...; x=0.5) <: FocusingProtocol
+
+A focusing protocol in which both `γ` and `y` are progressively increased, according to
+the formulas
+
+```julia
+γ = atanh(ρ^x)
+y = 1+ρ^(1-2x)/(1-ρ)
+```
+
+where `ρ` is taken from the given range(s) `r`. With `x=0`, this is basically the same as
+[`StandardReinforcement`](@ref) StandardReinforcement.
+
+See [`FocusingProtocol`](@ref).
+"""
+immutable PseudoReinforcement <: FocusingProtocol
     r::Vector{Float64}
     x::Float64
     PseudoReinforcement{T<:Real}(r::Range{T}...; x::Real=0.5) = new(vcat(map(collect, r)...), x)
@@ -814,9 +859,16 @@ function Base.next(s::PseudoReinforcement, i)
         return (atanh(ρ^x), 1+ρ^(1-2x)/(1-ρ), Inf), n[2]
     end
 end
-Base.done(s::PseudoReinforcement, i) = false #done(s.r, i)
+Base.done(s::PseudoReinforcement, i) = done(s.r, i)
 
-immutable FreeScoping <: IterationProtocol
+"""
+    FreeScoping(list::Vector{NTuple{3,Float64}}) <: FocusingProtocol
+
+A focusing protocol which just returns the values of `(γ,y,β)` from the given `list`.
+
+See [`FocusingProtocol`](@ref).
+"""
+immutable FreeScoping <: FocusingProtocol
     list::Vector{NTuple{3,Float64}}
     FreeScoping(list::Vector{NTuple{3,Float64}}) = new(list)
 end
@@ -838,8 +890,8 @@ Possible values of `patternspec` are:
 
 * a `Float64` number: this is interpreted as the `α` parameter, and `M = α*N*K` random ±1 patterns are generated.
 * a `Tuple` with `Vector{Vector{Float64}}` and a `Vector{Float64}`: these are the inputs and associated desired outputs.
-* a string: the patterns are read from a file (one input pattern per line, entries separated with the default
-            [`Base.split`](@ref) settings, outputs are assumed to be all 1).
+* a string: the patterns are read from a file (one input pattern per line, entries separated by whitespace, outputs are
+            assumed to be all 1).
 * a `Patterns` object (which could be the output of a previous run of the function).
 
 *Note*: all inputs and outputs must be ∈ {-1,1}.
@@ -862,7 +914,7 @@ The keyword arguments are:
                                     See `accuracy1` (and think of `K` instead of `N`).
 * `randfact` (default = `0.01`): random factor used in the initialization of the messages. Must be between `0` and `1`. Large values are
                                  not a good idea.
-* `iteration` (default = `StandardReinforcement(1e-2)`): focusing protocol specification. See [`IterationProtocol`](@ref).
+* `fprotocol` (default = `StandardReinforcement(1e-2)`): focusing protocol specification. See [`FocusingProtocol`](@ref).
 * `ϵ` (default = `1e-3`): convergence criterion: BP is assumed to have converged when the difference between messages in two successive
                           iterations is smaller than this value. Reduce it (e.g. to 1e-6) for more precise results, while increasing
                           `max_iters`.
@@ -904,7 +956,7 @@ function focusingBP(N::Int, K::Int,
                     accuracy1::Symbol = :accurate,
                     accuracy2::Symbol = :exact,
                     randfact::Float64 = 0.01,
-                    iteration::IterationProtocol = StandardReinforcement(1e-2),
+                    fprotocol::FocusingProtocol = StandardReinforcement(1e-2),
                     ϵ::Float64 = 1e-3,
                     initmessages::Union{Messages,Symbol,AbstractString} = :tanh,
                     outatzero::Bool = true,
@@ -974,8 +1026,8 @@ function focusingBP(N::Int, K::Int,
     !quiet && K > 1 && println("mags overlaps=\n", mags_symmetry(messages))
 
     it = 1
-    for (γ,y,β) in iteration
-        isfinite(β) && error("finite β not supported (needs energy computation in freeenergy2, see BPPerc.jl); given: $β")
+    for (γ,y,β) in fprotocol
+        isfinite(β) && error("finite β not yet supported; given: $β")
         pol = mtanh(F, γ)
         params.pol = pol
         params.r = y - 1
