@@ -902,7 +902,7 @@ The keyword arguments are:
 
 * `max_iters` (default = `1000`): maximum number of BP iterations per step. If convergence is not achieved in this many iterations,
                                   the algorithm proceeds to the next step.
-* `max_epochs` (default = `typemax(Int)`): maximum number of focusing steps.
+* `max_steps` (default = `typemax(Int)`): maximum number of focusing steps.
 * `seed` (default = `1`): random seed.
 * `damping` (default = `0`): BP damping parameter (between `0` and `1`; `0` = no damping).
 * `quiet` (default = `false`): whether to print on screen
@@ -952,7 +952,7 @@ function focusingBP(N::Integer, K::Integer,
                     initpatt::Union{AbstractString, Tuple{Vec2,Vec}, Real, Patterns};
 
                     max_iters::Integer = 1000,
-                    max_epochs::Integer = typemax(Int),
+                    max_steps::Integer = typemax(Int),
                     seed::Integer = 1,
                     damping::Real = 0.0,
                     quiet::Bool = false,
@@ -975,7 +975,7 @@ function focusingBP(N::Integer, K::Integer,
 
     writeoutfile ∈ [:auto, :always, :never] || error("invalide writeoutfile, expected one of :auto, :always, :never; given: $writeoutfile")
     max_iters ≥ 0 || throw(ArgumentError("max_iters must be non-negative; given: $max_iters"))
-    max_epochs ≥ 0 || throw(ArgumentError("max_epochs must be non-negative; given: $max_epocs"))
+    max_steps ≥ 0 || throw(ArgumentError("max_steps must be non-negative; given: $max_steps"))
     0 ≤ damping < 1 || throw(ArgumentError("damping must be ∈ [0,1); given: $damping"))
     0 ≤ randfact ≤ 1 || throw(ArgumentError("randfact must be ∈ [0,1]; given: $randfact"))
     accuracy1 ∈ [:exact, :accurate, :none] || error("accuracy1 must be one of :exact, :accurate, :none; given: $accuracy1")
@@ -1062,7 +1062,7 @@ function focusingBP(N::Integer, K::Integer,
             errs == 0 && return 0, messages, patterns
         end
         it += 1
-        it ≥ max_epochs && break
+        it ≥ max_steps && break
     end
     return errs, messages, patterns
 end
