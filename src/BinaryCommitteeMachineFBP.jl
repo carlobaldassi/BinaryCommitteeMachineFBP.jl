@@ -773,6 +773,11 @@ Available protocols are: [`StandardReinforcement`](@ref), [`Scoping`](@ref), [`P
 """
 abstract FocusingProtocol
 
+immutable StandardReinforcement <: FocusingProtocol
+    r::FloatRange{Float64}
+    StandardReinforcement{T<:Real}(r::Range{T}) = new(r)
+end
+
 @doc """
     StandardReinforcement(r::Range) <: FocusingProtocol
 
@@ -780,10 +785,6 @@ Standard reinforcement protocol, returns `γ=Inf` and `y=1/(1-x)`, where `x` is 
 
 See [`FocusingProtocol`](@ref).
 """ -> StandardReinforcement(r::Range)
-immutable StandardReinforcement <: FocusingProtocol
-    r::FloatRange{Float64}
-    StandardReinforcement{T<:Real}(r::Range{T}) = new(r)
-end
 
 """
     StandardReinforcement(dr::Float64) <: FocusingProtocol

@@ -8,7 +8,7 @@ using GZip
 const N = 21
 const K = 5
 const α = 0.1
-const kw = Dict([:randfact=>0.1, :seed=>135, :max_iters=>1, :damping=>0.5, :quiet=>false]);
+const kw = Dict(:randfact=>0.1, :seed=>135, :max_iters=>1, :damping=>0.5, :quiet=>false);
 
 patternsfile = "patterns.txt.gz"
 
