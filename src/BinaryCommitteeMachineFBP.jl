@@ -114,8 +114,23 @@ function read_messages{F<:Mag64}(io::IO, ::Type{F})
     return Messages{F}(M, N, K, ux, mw, mτ1, uw, Uτ1, mτ2, uτ1, check=false)
 end
 
+"""
+    read_messages(filename, mag_type)
+
+Reads messages from a file. `mag_type` is the internal storage format used in the resulting `Messages` object,
+it can be either `MagT64` (uses tanhs, accurate but slower) or `MagP64` (plain format, faster but inaccurate).
+
+The file format is the one produced by [`write_messages`](@ref).
+"""
 read_messages{F<:Mag64}(filename::AbstractString, ::Type{F}) = gzopen(io->read_messages(io, F), filename, "r")
 
+
+"""
+    write_messages(filename, messages)
+
+Writes messages to a file. The messages can be read back with [`read_messages`](@ref). Note that the output
+is a plain text file compressed with gzip.
+"""
 function write_messages(filename::AbstractString, messages::Messages)
     gzopen(filename, "w") do f
         write_messages(f, messages)
@@ -819,10 +834,10 @@ Run the Focusing Belief Propagation algorithm on a fully-connected committee mac
 `patternspec` specifies how to build the patterns for the training set. Note that with the defult
 settings `K` must be odd (see notes for the `accuracy1` and `accuracy2` arguments below).
 
-Possible `patternspec` are:
+Possible values of `patternspec` are:
 
 * a `Float64` number: this is interpreted as the `α` parameter, and `M = α*N*K` random ±1 patterns are generated.
-* a `Tuple` with `Vector{Vector{Float64}}` and a `Vector{Float64}`: these are the inputs and ssociated desired outputs.
+* a `Tuple` with `Vector{Vector{Float64}}` and a `Vector{Float64}`: these are the inputs and associated desired outputs.
 * a string: the patterns are read from a file (one input pattern per line, entries separated with the default
             [`Base.split`](@ref) settings, outputs are assumed to be all 1).
 * a `Patterns` object (which could be the output of a previous run of the function).
@@ -862,7 +877,7 @@ The keyword arguments are:
                                       that a file is written when `outatzero` is set to `false` and only when BP converges. It can make sense
                                       setting this to `:always` even when `outfile` is `nothing` to force the computation of the local
                                       entropy and other thermodynamic quantities.
-* `outfile` (default = `nothing`): the output file name. `nothing` means no output file is written. An empty string is means using a default
+* `outfile` (default = `nothing`): the output file name. `nothing` means no output file is written. An empty string means using a default
                                    file name of the form: `"results_BPCR_N\$(N)_K\$(K)_M\$(M)_s\$(seed).txt"`.
 * `outmessfiletmpl` (default = `nothing`): template file name for writing the messages at each focusing step. The file name should include a
                                            substring `"%gamma%"` which will be substituted with the value of the `γ` parameter at each step.
