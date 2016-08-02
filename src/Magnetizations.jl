@@ -6,7 +6,6 @@ export Mag64, MagT64, MagP64, mfill, mflatp, mrand, damp, reinforce, ⊗, ⊘, �
        merf, exactmix, erfmix, mtanh, log1pxy, mcrossentropy,
        logZ, forcedmag, showinner, parseinner, magformat
 
-using Base.Intrinsics
 using Compat
 
 import Base: convert, promote_rule, *, /, +, -, sign, signbit, isnan,
@@ -15,8 +14,8 @@ import Base: convert, promote_rule, *, /, +, -, sign, signbit, isnan,
 
 abstract Mag64
 
-m2f{F<:Mag64}(a::F) = box(Float64, unbox(F, a))
-f2m{F<:Mag64}(::Type{F}, a::Float64) = box(F, unbox(Float64, a))
+m2f(a::Mag64) = reinterpret(Float64, a)
+f2m{F<:Mag64}(::Type{F}, a::Float64) = reinterpret(F, a)
 
 convert{T<:Real}(::Type{T}, y::Mag64) = convert(T, Float64(y))
 convert{F<:Mag64}(::Type{F}, y::Real) = convert(F, Float64(y))
