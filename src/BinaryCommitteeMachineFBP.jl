@@ -765,8 +765,8 @@ end
     FocusingProtocol
 
 Abstract type representing a protocol for the focusing procedure, i.e. a way to produce
-successive values for the quantities `γ`, `y` and `β`. To be provided as argument to
-[`focusingBP`](@ref). Currently, however, only `β=Inf` is supported.
+successive values for the quantities `γ`, `y` and `β`. Currently, however, only `β=Inf`
+is supported. To be provided as an argument to [`focusingBP`](@ref).
 
 Available protocols are: [`StandardReinforcement`](@ref), [`Scoping`](@ref), [`PseudoReinforcement`](@ref) and
 [`FreeScoping`](@ref).
@@ -782,8 +782,6 @@ end
     StandardReinforcement(r::Range) <: FocusingProtocol
 
 Standard reinforcement protocol, returns `γ=Inf` and `y=1/(1-x)`, where `x` is taken from the given range `r`.
-
-See [`FocusingProtocol`](@ref).
 """ -> StandardReinforcement(r::Range)
 
 """
@@ -804,8 +802,6 @@ Base.done(s::StandardReinforcement, i) = done(s.r, i)
     Scoping(γr::Range, y) <: FocusingProtocol
 
 Focusing protocol with fixed `y` and a varying `γ` taken from the given `γr` range.
-
-See [`FocusingProtocol`](@ref).
 """
 immutable Scoping <: FocusingProtocol
     γr::FloatRange{Float64}
@@ -821,7 +817,12 @@ end
 Base.done(s::Scoping, i) = done(s.γr, i)
 
 
-"""
+immutable PseudoReinforcement <: FocusingProtocol
+    r::Vector{Float64}
+    x::Float64
+    PseudoReinforcement{T<:Real}(r::Range{T}...; x::Real=0.5) = new(vcat(map(collect, r)...), x)
+end
+@doc """
     PseudoReinforcement(r::Range...; x=0.5) <: FocusingProtocol
 
 A focusing protocol in which both `γ` and `y` are progressively increased, according to
@@ -833,15 +834,14 @@ y = 1+ρ^(1-2x)/(1-ρ)
 ```
 
 where `ρ` is taken from the given range(s) `r`. With `x=0`, this is basically the same as
-[`StandardReinforcement`](@ref) StandardReinforcement.
+[`StandardReinforcement`](@ref).
+""" -> PseudoReinforcement(r::Range...)
 
-See [`FocusingProtocol`](@ref).
 """
-immutable PseudoReinforcement <: FocusingProtocol
-    r::Vector{Float64}
-    x::Float64
-    PseudoReinforcement{T<:Real}(r::Range{T}...; x::Real=0.5) = new(vcat(map(collect, r)...), x)
-end
+    PseudoReinforcement(dr::Float64; x=0.5) <: FocusingProtocol
+
+Shorthand for [`PseudoReinforcement`](@ref)`(0:dr:(1-dr); x=x)`.
+"""
 PseudoReinforcement(dr::Float64; x::Real=0.5) = PseudoReinforcement(0.0:dr:(1-dr), x=x)
 
 Base.start(s::PseudoReinforcement) = start(s.r)
@@ -865,11 +865,15 @@ end
 Base.done(s::PseudoReinforcement, i) = done(s.r, i)
 
 """
-    FreeScoping(list::Vector{NTuple{3,Float64}}) <: FocusingProtocol
+    FreeScoping(list::Vector{NTuple{2,Float64}}) <: FocusingProtocol
 
-A focusing protocol which just returns the values of `(γ,y,β)` from the given `list`.
+A focusing protocol which just returns the values of `(γ,y)` from the given `list`.
 
-See [`FocusingProtocol`](@ref).
+Example:
+
+```julia
+FreeScoping([(1/(1-x), (2-x)/(1-x)) for x = 0:0.01:0.99])
+```
 """
 immutable FreeScoping <: FocusingProtocol
     list::Vector{NTuple{3,Float64}}
