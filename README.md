@@ -6,7 +6,7 @@
 
 This package implements the Focusing Belief Propagation algorithm for
 committee machines with binary weights described in the paper
-[Unreasonable Effectiveness of Learning Neural Nets: Accessible States and Robust Ensembles](http://arxiv.org/abs/1605.06444)
+[Unreasonable Effectiveness of Learning Neural Networks: From Accessible States and Robust Ensembles to Basic Algorithmic Schemes](http://arxiv.org/abs/1605.06444)
 by Carlo Baldassi, Christian Borgs, Jennifer Chayes, Alessandro Ingrosso, Carlo Lucibello, Luca Saglietti and Riccardo Zecchina.
 
 The code is written in [Julia](http://julialang.org).
