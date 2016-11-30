@@ -6,7 +6,7 @@ committee machines with binary weights described in the paper
 and Robust Ensembles to Basic Algorithmic Schemes*
 by Carlo Baldassi, Christian Borgs, Jennifer Chayes, Alessandro Ingrosso,
 Carlo Lucibello, Luca Saglietti and Riccardo Zecchina,
-Proc. Natl. Acad. Sci. U.S.A. (2016), [doi:10.1073/pnas.1608103113](http://dx.doi.org/10.1073/pnas.1608103113).
+Proc. Natl. Acad. Sci. U.S.A. 113: E7655-E7662 (2016), [doi:10.1073/pnas.1608103113](http://dx.doi.org/10.1073/pnas.1608103113).
 
 The package is tested against Julia `0.4`, `0.5` and *current* `0.6-dev` on Linux, OS X, and Windows.
 
