@@ -109,7 +109,7 @@
 
 <p><a id='BinaryCommitteeMachineFBP.jl-documentation-1'></a></p>
 <h1 id="binarycommitteemachinefbpjl-documentation">BinaryCommitteeMachineFBP.jl documentation</h1>
-<p>This package implements the Focusing Belief Propagation algorithm for committee machines with binary weights described in the paper <em>Unreasonable Effectiveness of Learning Neural Networks: From Accessible States and Robust Ensembles to Basic Algorithmic Schemes</em> by Carlo Baldassi, Christian Borgs, Jennifer Chayes, Alessandro Ingrosso, Carlo Lucibello, Luca Saglietti and Riccardo Zecchina, Proc. Natl. Acad. Sci. U.S.A. (2016), <a href="http://dx.doi.org/10.1073/pnas.1608103113">doi:10.1073/pnas.1608103113</a>.</p>
+<p>This package implements the Focusing Belief Propagation algorithm for committee machines with binary weights described in the paper <em>Unreasonable Effectiveness of Learning Neural Networks: From Accessible States and Robust Ensembles to Basic Algorithmic Schemes</em> by Carlo Baldassi, Christian Borgs, Jennifer Chayes, Alessandro Ingrosso, Carlo Lucibello, Luca Saglietti and Riccardo Zecchina, Proc. Natl. Acad. Sci. U.S.A. 113: E7655-E7662 (2016), <a href="http://dx.doi.org/10.1073/pnas.1608103113">doi:10.1073/pnas.1608103113</a>.</p>
 <p>The package is tested against Julia <code>0.4</code>, <code>0.5</code> and <em>current</em> <code>0.6-dev</code> on Linux, OS X, and Windows.</p>
 <p><a id='Installation-1'></a></p>
 <h3 id="installation">Installation</h3>
@@ -163,7 +163,7 @@
 <pre><code>julia&gt; errs, messages, patterns = B.focusingBP(321, 5, 0.3, randfact=0.1, seed=135, max_iters=1, damping=0.5);
 </code></pre>
 
-<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/8f6fae448e17c40115bcd8fd26ef4602927c1930/src/BinaryCommitteeMachineFBP.jl#L889-L956' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/1b8a6cee28dda4c18767229c798e35904ece9eed/src/BinaryCommitteeMachineFBP.jl#L889-L956' class='documenter-source'>source</a><br></p>
 <p><a id='Focusing-protocols-1'></a></p>
 <h4 id="focusing-protocols">Focusing protocols</h4>
 <p><a id='BinaryCommitteeMachineFBP.FocusingProtocol' href='#BinaryCommitteeMachineFBP.FocusingProtocol'>#</a>
@@ -173,26 +173,26 @@
 
 <p>Abstract type representing a protocol for the focusing procedure, i.e. a way to produce successive values for the quantities <code>γ</code>, <code>y</code> and <code>β</code>. Currently, however, only <code>β=Inf</code> is supported. To be provided as an argument to <a href=".#BinaryCommitteeMachineFBP.focusingBP"><code>focusingBP</code></a>.</p>
 <p>Available protocols are: <a href=".#BinaryCommitteeMachineFBP.StandardReinforcement"><code>StandardReinforcement</code></a>, <a href=".#BinaryCommitteeMachineFBP.Scoping"><code>Scoping</code></a>, <a href=".#BinaryCommitteeMachineFBP.PseudoReinforcement"><code>PseudoReinforcement</code></a> and <a href=".#BinaryCommitteeMachineFBP.FreeScoping"><code>FreeScoping</code></a>.</p>
-<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/8f6fae448e17c40115bcd8fd26ef4602927c1930/src/BinaryCommitteeMachineFBP.jl#L765-L774' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/1b8a6cee28dda4c18767229c798e35904ece9eed/src/BinaryCommitteeMachineFBP.jl#L765-L774' class='documenter-source'>source</a><br></p>
 <p><a id='BinaryCommitteeMachineFBP.StandardReinforcement' href='#BinaryCommitteeMachineFBP.StandardReinforcement'>#</a>
 <strong><code>BinaryCommitteeMachineFBP.StandardReinforcement</code></strong> &mdash; <em>Type</em>.</p>
 <pre><code>StandardReinforcement(r::Range) &lt;: FocusingProtocol
 </code></pre>
 
 <p>Standard reinforcement protocol, returns <code>γ=Inf</code> and <code>y=1/(1-x)</code>, where <code>x</code> is taken from the given range <code>r</code>.</p>
-<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/8f6fae448e17c40115bcd8fd26ef4602927c1930/src/BinaryCommitteeMachineFBP.jl#L782-L786' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/1b8a6cee28dda4c18767229c798e35904ece9eed/src/BinaryCommitteeMachineFBP.jl#L782-L786' class='documenter-source'>source</a><br></p>
 <pre><code>StandardReinforcement(dr::Float64) &lt;: FocusingProtocol
 </code></pre>
 
 <p>Shorthand for <a href=".#BinaryCommitteeMachineFBP.StandardReinforcement"><code>StandardReinforcement</code></a><code>(0:dr:(1-dr))</code>.</p>
-<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/8f6fae448e17c40115bcd8fd26ef4602927c1930/src/BinaryCommitteeMachineFBP.jl#L788-L792' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/1b8a6cee28dda4c18767229c798e35904ece9eed/src/BinaryCommitteeMachineFBP.jl#L788-L792' class='documenter-source'>source</a><br></p>
 <p><a id='BinaryCommitteeMachineFBP.Scoping' href='#BinaryCommitteeMachineFBP.Scoping'>#</a>
 <strong><code>BinaryCommitteeMachineFBP.Scoping</code></strong> &mdash; <em>Type</em>.</p>
 <pre><code>Scoping(γr::Range, y) &lt;: FocusingProtocol
 </code></pre>
 
 <p>Focusing protocol with fixed <code>y</code> and a varying <code>γ</code> taken from the given <code>γr</code> range.</p>
-<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/8f6fae448e17c40115bcd8fd26ef4602927c1930/src/BinaryCommitteeMachineFBP.jl#L802-L806' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/1b8a6cee28dda4c18767229c798e35904ece9eed/src/BinaryCommitteeMachineFBP.jl#L802-L806' class='documenter-source'>source</a><br></p>
 <p><a id='BinaryCommitteeMachineFBP.PseudoReinforcement' href='#BinaryCommitteeMachineFBP.PseudoReinforcement'>#</a>
 <strong><code>BinaryCommitteeMachineFBP.PseudoReinforcement</code></strong> &mdash; <em>Type</em>.</p>
 <pre><code>PseudoReinforcement(r::Range...; x=0.5) &lt;: FocusingProtocol
@@ -204,12 +204,12 @@ y = 1+ρ^(1-2x)/(1-ρ)
 </code></pre>
 
 <p>where <code>ρ</code> is taken from the given range(s) <code>r</code>. With <code>x=0</code>, this is basically the same as <a href=".#BinaryCommitteeMachineFBP.StandardReinforcement"><code>StandardReinforcement</code></a>.</p>
-<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/8f6fae448e17c40115bcd8fd26ef4602927c1930/src/BinaryCommitteeMachineFBP.jl#L826-L839' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/1b8a6cee28dda4c18767229c798e35904ece9eed/src/BinaryCommitteeMachineFBP.jl#L826-L839' class='documenter-source'>source</a><br></p>
 <pre><code>PseudoReinforcement(dr::Float64; x=0.5) &lt;: FocusingProtocol
 </code></pre>
 
 <p>Shorthand for <a href=".#BinaryCommitteeMachineFBP.PseudoReinforcement"><code>PseudoReinforcement</code></a><code>(0:dr:(1-dr); x=x)</code>.</p>
-<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/8f6fae448e17c40115bcd8fd26ef4602927c1930/src/BinaryCommitteeMachineFBP.jl#L841-L845' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/1b8a6cee28dda4c18767229c798e35904ece9eed/src/BinaryCommitteeMachineFBP.jl#L841-L845' class='documenter-source'>source</a><br></p>
 <p><a id='BinaryCommitteeMachineFBP.FreeScoping' href='#BinaryCommitteeMachineFBP.FreeScoping'>#</a>
 <strong><code>BinaryCommitteeMachineFBP.FreeScoping</code></strong> &mdash; <em>Type</em>.</p>
 <pre><code>FreeScoping(list::Vector{NTuple{2,Float64}}) &lt;: FocusingProtocol
@@ -220,7 +220,7 @@ y = 1+ρ^(1-2x)/(1-ρ)
 <pre><code class="julia">FreeScoping([(1/(1-x), (2-x)/(1-x)) for x = 0:0.01:0.99])
 </code></pre>
 
-<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/8f6fae448e17c40115bcd8fd26ef4602927c1930/src/BinaryCommitteeMachineFBP.jl#L868-L878' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/1b8a6cee28dda4c18767229c798e35904ece9eed/src/BinaryCommitteeMachineFBP.jl#L868-L878' class='documenter-source'>source</a><br></p>
 <p><a id='Reading-and-writing-messages-files-1'></a></p>
 <h3 id="reading-and-writing-messages-files">Reading and writing messages files</h3>
 <p><a id='BinaryCommitteeMachineFBP.read_messages' href='#BinaryCommitteeMachineFBP.read_messages'>#</a>
@@ -230,14 +230,14 @@ y = 1+ρ^(1-2x)/(1-ρ)
 
 <p>Reads messages from a file. <code>mag_type</code> is the internal storage format used in the resulting <code>Messages</code> object, it can be either <code>MagT64</code> (uses tanhs, accurate but slower) or <code>MagP64</code> (plain format, faster but inaccurate).</p>
 <p>The file format is the one produced by <a href=".#BinaryCommitteeMachineFBP.write_messages"><code>write_messages</code></a>.</p>
-<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/8f6fae448e17c40115bcd8fd26ef4602927c1930/src/BinaryCommitteeMachineFBP.jl#L120-L127' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/1b8a6cee28dda4c18767229c798e35904ece9eed/src/BinaryCommitteeMachineFBP.jl#L120-L127' class='documenter-source'>source</a><br></p>
 <p><a id='BinaryCommitteeMachineFBP.write_messages' href='#BinaryCommitteeMachineFBP.write_messages'>#</a>
 <strong><code>BinaryCommitteeMachineFBP.write_messages</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>write_messages(filename, messages)
 </code></pre>
 
 <p>Writes messages to a file. The messages can be read back with <a href=".#BinaryCommitteeMachineFBP.read_messages"><code>read_messages</code></a>. Note that the output is a plain text file compressed with gzip.</p>
-<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/8f6fae448e17c40115bcd8fd26ef4602927c1930/src/BinaryCommitteeMachineFBP.jl#L131-L136' class='documenter-source'>source</a><br></p></div>
+<p><a target='_blank' href='https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/tree/1b8a6cee28dda4c18767229c798e35904ece9eed/src/BinaryCommitteeMachineFBP.jl#L131-L136' class='documenter-source'>source</a><br></p></div>
         </div>
 
         <footer class="col-md-12">
