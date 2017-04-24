@@ -16,7 +16,7 @@ let
     const mm = 16.0
     const st = 1e-4
     const r = 1.0:st:mm
-    const rb = convert(FloatRange{BigFloat}, r)
+    const rb = big(first(r)):big(step(r)):big(last(r))
 
     const interp_degree = Quadratic
     const interp_boundary = Line

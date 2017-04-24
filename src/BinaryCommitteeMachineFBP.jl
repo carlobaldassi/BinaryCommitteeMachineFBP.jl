@@ -825,7 +825,7 @@ Available protocols are: [`StandardReinforcement`](@ref), [`Scoping`](@ref), [`P
 abstract FocusingProtocol
 
 immutable StandardReinforcement <: FocusingProtocol
-    r::FloatRange{Float64}
+    r::Range{Float64}
     StandardReinforcement{T<:Real}(r::Range{T}) = new(r)
 end
 
@@ -855,7 +855,7 @@ Base.done(s::StandardReinforcement, i) = done(s.r, i)
 Focusing protocol with fixed `y` and a varying `γ` taken from the given `γr` range.
 """
 immutable Scoping <: FocusingProtocol
-    γr::FloatRange{Float64}
+    γr::Range{Float64}
     y::Float64
     Scoping(γr::Range, y) = new(γr, y)
 end
