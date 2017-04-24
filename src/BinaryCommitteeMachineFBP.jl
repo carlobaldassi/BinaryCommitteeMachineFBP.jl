@@ -213,10 +213,31 @@ immutable Patterns
         new(M, X, output)
     end
 end
-
 Patterns(Xo::Tuple{Vec2,Vec}) = Patterns(Xo...)
 
-Patterns(NM::Tuple{Integer,Integer}) = ((N,M) = NM; Patterns([rand(-1.0:2.0:1.0, N) for a = 1:M], ones(M)))
+@doc """
+    Patterns(inputs::AbstractVector, outputs::AbstractVector)
+
+Construct a `Patterns` object. `inputs` and `outputs` must have the same length.
+`outputs` entries must be ∈ {-1,1}. `intputs` entries must be Vectors in which
+each element is ∈ {-1,1}, and all the vectors must have the same length.
+""" -> Patterns(inputs::AbstractVector, outputs::AbstractVector)
+
+
+"""
+    Patterns(NM::Tuple{Integer,Integer}; teacher::Union{Bool,Int,Vector{Vector{Float64}}} = false)
+
+Constructs random (unbiasad, unifom i.i.d.) binary patterns. The `NM` argument is a Tuple with
+two items, the size of the inputs (`N`) and the number of patterns (`M`).
+The keyword argument `teacher` controls how the outputs are generated:
+* If `false`, they are random i.i.d. (the default)
+* If `true`, a teacher unit with a single hidden layer (a perceptron) is generated randomly
+  and it's used to compute the outputs
+* If an `Int` is given, it's the number of hidden units of the teacher, which is generated
+  randomly and used to compute the outputs
+* If a `Vector{Vector{Float64}}` is given, it represents the weights of the teacher, with one
+  `Vector{Float64}` for each hidden unit.
+"""
 function Patterns(NM::Tuple{Integer,Integer}; teacher::Union{Bool,Int,Vec2} = false)
     N, M = NM
     X = [rand(-1.0:2.0:1.0, N) for a = 1:M]
@@ -241,6 +262,13 @@ function Patterns(NM::Tuple{Integer,Integer}; teacher::Union{Bool,Int,Vec2} = fa
 end
 Patterns(patterns::Patterns) = deepcopy(patterns)
 
+"""
+    Patterns(patternsfile::AbstractString)
+
+Read patterns from a file. It only reads the inputs, one pattern per line, entries separated by
+whitespace. All lines must have the same length. All outputs are assumed to be `1`. The file may
+optionally be gzipped.
+"""
 function Patterns(patternsfile::AbstractString)
     X = Vec[]
     N = 0
@@ -922,7 +950,7 @@ Possible values of `patternspec` are:
 * a `Tuple` with `Vector{Vector{Float64}}` and a `Vector{Float64}`: these are the inputs and associated desired outputs.
 * a string: the patterns are read from a file (one input pattern per line, entries separated by whitespace, outputs are
             assumed to be all 1); the file can be gzipped.
-* a `Patterns` object (which could be the output of a previous run of the function).
+* a [`Patterns`](@ref) object (which could be the output of a previous run of the function).
 
 *Note*: all inputs and outputs must be ∈ {-1,1}.
 

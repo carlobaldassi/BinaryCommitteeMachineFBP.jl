@@ -1,5 +1,9 @@
 # BinaryCommitteeMachineFBP.jl documentation
 
+```@meta
+CurrentModule = BinaryCommitteeMachineFBP
+```
+
 This package implements the Focusing Belief Propagation algorithm for
 committee machines with binary weights described in the paper
 *Unreasonable Effectiveness of Learning Neural Networks: From Accessible States
@@ -32,6 +36,12 @@ The code provides a main function, [`focusingBP`](@ref), and some auxiliary func
 
 ```@docs
 focusingBP
+```
+
+#### Patterns
+
+```@docs
+Patterns
 ```
 
 #### Focusing protocols
