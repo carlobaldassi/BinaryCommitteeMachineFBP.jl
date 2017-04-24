@@ -217,6 +217,28 @@ end
 Patterns(Xo::Tuple{Vec2,Vec}) = Patterns(Xo...)
 
 Patterns(NM::Tuple{Integer,Integer}) = ((N,M) = NM; Patterns([rand(-1.0:2.0:1.0, N) for a = 1:M], ones(M)))
+function Patterns(NM::Tuple{Integer,Integer}; teacher::Union{Bool,Int,Vec2} = false)
+    N, M = NM
+    X = [rand(-1.0:2.0:1.0, N) for a = 1:M]
+    if teacher == false
+        output = ones(M)
+    else
+        if !isa(teacher, Vec2)
+            K::Int = isa(teacher, Bool) ? 1 : teacher
+            tw = [rand(-1.0:2.0:1.0, N) for k = 1:K]
+        else
+            K = length(teacher)
+            K > 0 || throw(ArgumentError("empty teacher"))
+            tw = teacher
+            all(w -> length(w) == N, tw) || throw(ArgumentError("invalid teacher length, expected $N, given: $(sort!(unique(collect(w->length(w) for w in tw))))"))
+            all(w -> all(x -> abs(x) == 1, w), tw) || throw(ArgumentError("invalid teacher, entries must be all ±1"))
+        end
+        r0 = Array(Float64, K)
+        output = Float64[transf1!(r0, tw, ξ) for ξ in X]
+        @assert all(o->abs(o) == 1, output)
+    end
+    Patterns(X, output)
+end
 Patterns(patterns::Patterns) = deepcopy(patterns)
 
 function Patterns(patternsfile::AbstractString)
