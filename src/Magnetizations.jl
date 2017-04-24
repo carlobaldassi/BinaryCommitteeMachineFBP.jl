@@ -70,8 +70,8 @@ reinforce(m::Mag64, m0::Mag64, γ::Float64) = m ⊗ reinforce(m0, γ)
 
 damp(newx::Float64, oldx::Float64, λ::Float64) = newx * (1 - λ) + oldx * λ
 
-@compat Base.:(==)(a::Mag64, b::Float64) = (Float64(a) == b)
-@compat Base.:(==)(a::Float64, b::Mag64) = (b == a)
+Base.:(==)(a::Mag64, b::Float64) = (Float64(a) == b)
+Base.:(==)(a::Float64, b::Mag64) = (b == a)
 
 isless(m::Mag64, x::Real) = isless(Float64(m), x)
 isless(x::Real, m::Mag64) = isless(x, Float64(m))

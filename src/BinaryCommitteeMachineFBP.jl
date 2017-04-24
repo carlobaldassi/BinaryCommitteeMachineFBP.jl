@@ -463,7 +463,7 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
             rC[end] = rC0[end] * (1+hi)/2
         end
 
-        @compat @assert maximum(abs.(leftC[end] .- rightC[1])) ≤ 1e-10 (leftC[end], rightC[1])
+        @assert maximum(abs.(leftC[end] .- rightC[1])) ≤ 1e-10 (leftC[end], rightC[1])
 
         @assert isodd(N)
         z = (N+1) ÷ 2
@@ -594,7 +594,7 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
             rC[end] = rC0[end] * (1+hi)/2
         end
 
-        @compat @assert maximum(abs.(leftC[end] .- rightC[1])) ≤ 1e-10 (leftC[end], rightC[1])
+        @assert maximum(abs.(leftC[end] .- rightC[1])) ≤ 1e-10 (leftC[end], rightC[1])
 
         @assert isodd(N)
         z = (N+1) ÷ 2
