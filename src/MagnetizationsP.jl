@@ -1,6 +1,6 @@
 # This file is a part of BinaryCommitteeMachineFBP.jl. License is MIT: http://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/LICENCE.md
 
-bitstype 64 MagP64 <: Mag64
+@compat primitive type MagP64 <: Mag64 64 end
 
 f2mP(a::Float64) = f2m(MagP64, a)
 

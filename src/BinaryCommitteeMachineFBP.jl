@@ -48,8 +48,8 @@ immutable Messages{F<:Mag64}
     mτ2::MagVec{F}    # 2+
     uτ1::MagVec2{F}   # 2
 
-    function Messages(M::Int, N::Int, K::Int, ux::MagVec2{F}, mw::MagVec2{F}, mτ1::MagVec2{F}, uw::MagVec3{F},
-                      Uτ1::MagVec2{F}, mτ2::MagVec{F}, uτ1::MagVec2{F}; check::Bool = true)
+    @inner F function Messages(M::Int, N::Int, K::Int, ux::MagVec2{F}, mw::MagVec2{F}, mτ1::MagVec2{F}, uw::MagVec3{F},
+                               Uτ1::MagVec2{F}, mτ2::MagVec{F}, uτ1::MagVec2{F}; check::Bool = true)
         if check
             checkdims(ux, K, N)
             checkdims(mw, K, N)
@@ -254,7 +254,7 @@ function Patterns(NM::Tuple{Integer,Integer}; teacher::Union{Bool,Int,Vec2} = fa
             all(w -> length(w) == N, tw) || throw(ArgumentError("invalid teacher length, expected $N, given: $(sort!(unique(collect(w->length(w) for w in tw))))"))
             all(w -> all(x -> abs(x) == 1, w), tw) || throw(ArgumentError("invalid teacher, entries must be all ±1"))
         end
-        r0 = Array(Float64, K)
+        r0 = Array{Float64}(K)
         output = Float64[transf1!(r0, tw, ξ) for ξ in X]
         @assert all(o->abs(o) == 1, output)
     end
@@ -327,8 +327,8 @@ end
 let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Dict{Int,Vec}(),
     vHs = Dict{Int,Vec}(), leftCs = Dict{Int,Vec2}(), rightCs = Dict{Int,Vec2}()
 
-    geth(::Type{MagT64}, N::Int) = Base.@get!(hsT, N, Array(MagT64, N))
-    geth(::Type{MagP64}, N::Int) = Base.@get!(hsP, N, Array(MagP64, N))
+    geth(::Type{MagT64}, N::Int) = Base.@get!(hsT, N, Array{MagT64}(N))
+    geth(::Type{MagP64}, N::Int) = Base.@get!(hsP, N, Array{MagP64}(N))
 
     global theta_node_update_approx!
     function theta_node_update_approx!{F<:Mag64}(m::MagVec{F}, M::F, ξ::Vec, u::MagVec{F}, U::F, params::Params)
@@ -336,7 +336,7 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
 
         N = length(m)
         h::MagVec{F} = geth(F, N)
-        vh = Base.@get!(vhs, N, Array(Float64, N))
+        vh = Base.@get!(vhs, N, Array{Float64}(N))
 
         subfield!(h, m, u)
         H = M ⊘ U
@@ -385,7 +385,7 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
 
         N = length(m)
         h::MagVec{F} = geth(F, N)
-        vh = Base.@get!(vhs, N, Array(Float64, N))
+        vh = Base.@get!(vhs, N, Array{Float64}(N))
 
         subfield!(h, m, u)
         H = M ⊘ U
@@ -426,7 +426,7 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
 
         N = length(m)
         h::MagVec{F} = geth(F, N)
-        vh = Base.@get!(vhs, N, Array(Float64, N))
+        vh = Base.@get!(vhs, N, Array{Float64}(N))
         leftC = Base.@get!(leftCs, N, [zeros(i+1) for i = 1:N])
         rightC = Base.@get!(rightCs, N, [zeros((N-i+1)+1) for i = 1:N])
 
@@ -524,7 +524,7 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
     function free_energy_theta{F<:Mag64}(m::MagVec{F}, M::F, ξ::Vec, u::MagVec{F}, U::F)
         N = length(m)
         h::MagVec{F} = geth(F, N)
-        vh = Base.@get!(vhs, N, Array(Float64, N))
+        vh = Base.@get!(vhs, N, Array{Float64}(N))
 
         f = 0.0
 
@@ -554,7 +554,7 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
 
         N = length(m)
         h::MagVec{F} = geth(F, N)
-        vh = Base.@get!(vhs, N, Array(Float64, N))
+        vh = Base.@get!(vhs, N, Array{Float64}(N))
         leftC = Base.@get!(leftCs, N, [zeros(i+1) for i = 1:N])
         rightC = Base.@get!(rightCs, N, [zeros((N-i+1)+1) for i = 1:N])
 
@@ -707,7 +707,7 @@ function test!(r0::Vec, ws::Vec2, ξ::Vec, out::Int)
 end
 
 function test(ws::Vec2, ξs::Vec2, output::IVec)
-    r0 = Array(Float64, length(ws))
+    r0 = Array{Float64}(length(ws))
     sum([test!(r0, ws, ξ, out) for (ξ,out) in zip(ξs, output)])
 end
 
@@ -822,7 +822,7 @@ is supported. To be provided as an argument to [`focusingBP`](@ref).
 Available protocols are: [`StandardReinforcement`](@ref), [`Scoping`](@ref), [`PseudoReinforcement`](@ref) and
 [`FreeScoping`](@ref).
 """
-abstract FocusingProtocol
+@compat abstract type FocusingProtocol end
 
 immutable StandardReinforcement <: FocusingProtocol
     r::Range{Float64}

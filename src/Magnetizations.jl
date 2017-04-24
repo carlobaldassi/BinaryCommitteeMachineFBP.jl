@@ -12,7 +12,7 @@ import Base: convert, promote_rule, *, /, +, -, sign, signbit, isnan,
              show, showcompact, abs, isfinite, isless, copysign,
              atanh, zero
 
-abstract Mag64
+@compat abstract type Mag64 end
 
 m2f(a::Mag64) = reinterpret(Float64, a)
 f2m{F<:Mag64}(::Type{F}, a::Float64) = reinterpret(F, a)
