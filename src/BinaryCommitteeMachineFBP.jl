@@ -10,6 +10,7 @@ using StatsFuns
 using GZip
 using ExtractMacro
 using Iterators
+VERSION >= v"0.6.0-dev.2767" && using SpecialFunctions
 using Compat
 
 include("Magnetizations.jl")
