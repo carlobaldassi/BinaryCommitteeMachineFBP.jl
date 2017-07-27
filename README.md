@@ -14,7 +14,7 @@ Proc. Natl. Acad. Sci. U.S.A. 113: E7655-E7662 (2016), [doi:10.1073/pnas.1608103
 
 The code is written in [Julia](http://julialang.org).
 
-The package is tested against Julia `0.5` and *current* `0.6-pre` on Linux, OS X, and Windows.
+The package is tested against Julia `0.5`, `0.6` and *current* (at the time of writing) `0.7-DEV` on Linux, OS X, and Windows.
 
 ### Installation
 

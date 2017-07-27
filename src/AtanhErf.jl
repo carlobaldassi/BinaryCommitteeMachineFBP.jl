@@ -5,8 +5,9 @@ module AtanhErf
 export atanherf, batanherf
 
 using StatsFuns
-using Interpolations
+VERSION >= v"0.6.0-dev.2767" && using SpecialFunctions
 using JLD
+using Interpolations
 using Compat
 
 const builddir = joinpath(dirname(@__FILE__), "..", "deps", "builds")
@@ -16,7 +17,7 @@ let
     const mm = 16.0
     const st = 1e-4
     const r = 1.0:st:mm
-    const rb = big(first(r)):big(step(r)):big(last(r))
+    const rb = big(first(r)):big(step(r)):big(last(r)) # TODO: use big.(r) when julia 0.5 support is dropped
 
     const interp_degree = Quadratic
     const interp_boundary = Line

@@ -6,6 +6,7 @@ export Mag64, MagT64, MagP64, mfill, mflatp, mrand, damp, reinforce, ⊗, ⊘, �
        merf, exactmix, erfmix, mtanh, log1pxy, mcrossentropy,
        logZ, forcedmag, showinner, parseinner, magformat
 
+VERSION >= v"0.6.0-dev.2767" && using SpecialFunctions
 using Compat
 
 import Base: convert, promote_rule, *, /, +, -, sign, signbit, isnan,
