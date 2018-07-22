@@ -283,31 +283,33 @@ function Patterns(patternsfile::AbstractString)
     end
     o = Int[1.0 for a = 1:M]
 
-    return Patterns(X,o)
+    return Patterns(X, o)
 end
 
 function computeσ²(w::Vec)
     σ² = 0.0
-    @inbounds for wi in w
-        σ² += (1 - wi^2)
+    @inbounds @simd for wi in w
+        # σ² += (1 - wi^2)
+        σ² += (1 - wi*wi)
     end
     return σ²
 end
 
-function computeσ²(w::Vec, ξ::Vec)
-    σ² = 0.0
-    @inbounds @itr for (wi,ξi) in zip(w,ξ)
-        σ² += (1 - wi^2) * ξi^2
-    end
-    return σ²
-end
+# function computeσ²(w::Vec, ξ::Vec)
+#     σ² = 0.0
+#     @inbounds @itr for (wi,ξi) in zip(w,ξ)
+#         σ² += (1 - wi^2) * ξi^2
+#     end
+#     return σ²
+# end
 
 computeσ(σ²::Float64) = √(2σ²)
 computeσ(w::Vec) = √(2computeσ²(w))
-computeσ(w::Vec, ξ::Vec) = √(2computeσ²(w, ξ))
+# computeσ(w::Vec, ξ::Vec) = √(2computeσ²(w, ξ))
 
-transf0(w::Vec, ξ::Vec) = transf0(w, computeσ(w, ξ), ξ)
-transf0(w::Vec, σ::Float64, ξ::Vec) = erf(dot(ξ, w) / σ)
+# transf0(w::Vec, ξ::Vec) = transf0(w, computeσ(w, ξ), ξ)
+transf0(w::Vec, ξ::Vec) = transf0(w, computeσ(w), ξ) # NOTE: assuming ξ = ±1 here!!!
+transf0(w::Vec, σ::Float64, ξ::Vec) = erf((ξ ⋅ w) / σ)
 
 function transf0!(r::Vec, w1::Vec2, ξ::Vec)
     @itr for (i,w) in enumerate(w1)
@@ -320,8 +322,14 @@ gauss(x, dσ²) = e^(-x^2 / dσ²) / √(π * dσ²)
 gauss(x) = e^(-x^2 / 2) / √(2π)
 
 function subfield!(h::MagVec, m::MagVec, u::MagVec)
-    @inbounds for i = 1:length(m)
+    @inbounds @simd for i = 1:length(m)
         h[i] = m[i] ⊘ u[i]
+    end
+end
+
+function addfield!(m::MagVec, h::MagVec, u::MagVec)
+    @inbounds @simd for i = 1:length(m)
+        m[i] = h[i] ⊗ u[i]
     end
 end
 
@@ -346,11 +354,11 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
             vh[i] = h[i]
         end
 
-
         vH = Float64(H)
-        σ² = computeσ²(vh, ξ)
+        # σ² = computeσ²(vh, ξ)
+        σ² = computeσ²(vh) # assume ξ = ±1
 
-        μ = dot(vh, ξ)
+        μ = vh ⋅ ξ
 
         dσ² = 2σ²
         newU = merf(F, μ / √dσ²)
@@ -371,11 +379,12 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
         @inbounds for i = 1:N
             ξi = ξ[i]
             hi = vh[i]
-            newu = convert(F, clamp(ξi * (p0 + ξi * (hi * pμ + ξi * (1-hi^2) * pσ)), -1+eps(-1.0), 1-eps(1.0))) # use mag-functions?
-            maxdiff = max(maxdiff, abs(newu - u[i]))
+            newu = convert(F, clamp(ξi * (p0 + ξi * (hi * pμ + ξi * (1-hi^2) * pσ)), -1+3e-16, 1-3e-16)) # use mag-functions?
+            d = conv_diff(newu, u[i])
+            maxdiff = ifelse(maxdiff < d, d, maxdiff)
             u[i] = damp(newu, u[i], λ)
-            m[i] = h[i] ⊗ u[i]
         end
+        addfield!(m, h, u)
 
         return maxdiff, U, M
     end
@@ -395,8 +404,9 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
             vh[i] = h[i]
         end
 
-        σ² = computeσ²(vh, ξ)
-        μ = dot(vh, ξ)
+        # σ² = computeσ²(vh, ξ)
+        σ² = computeσ²(vh) # assume ξ = ±1
+        μ = vh ⋅ ξ
 
         dσ² = 2σ²
         newU = merf(F, μ / √dσ²)
@@ -409,15 +419,16 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
             ξi = ξ[i]
             hi = vh[i]
             μ̄ = μ - ξi * hi
-            σ̄² = σ² - (1-hi^2) * ξi^2
+            σ̄² = σ² - (1-hi^2) # * ξi^2 # assume ξ = ±1
             sdσ̄² = √(2σ̄²)
             m₊ = (μ̄ + ξi) / sdσ̄²
             m₋ = (μ̄ - ξi) / sdσ̄²
             newu = erfmix(H, m₊, m₋)
-            maxdiff = max(maxdiff, abs(newu - u[i]))
+            d = abs(newu - u[i])
+            maxdiff = ifelse(maxdiff < d, d, maxdiff)
             u[i] = damp(newu, u[i], λ)
-            m[i] = h[i] ⊗ u[i]
         end
+        addfield!(m, h, u)
         return maxdiff, U, M
     end
 
@@ -512,12 +523,12 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
             mm = convert(F, clamp(pp - ξi * pz - pm, -1.0, 1.0))
             newu = exactmix(H, mp, mm)
 
-            maxdiff = max(maxdiff, abs(newu - u[i]))
+            d = abs(newu - u[i])
+            maxdiff = ifelse(maxdiff < d, d, maxdiff)
             u[i] = damp(newu, u[i], λ)
-            m[i] = h[i] ⊗ u[i]
-
             @assert isfinite(u[i]) (u[i],)
         end
+        addfield!(m, h, u)
         return maxdiff, U, M
     end
 
@@ -536,8 +547,9 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
             vh[i] = h[i]
         end
 
-        σ = computeσ(vh, ξ)
-        μ = dot(vh, ξ)
+        # σ = computeσ(vh, ξ)
+        σ = computeσ(vh) # assume ξ = ±1
+        μ = vh ⋅ ξ
 
         b = merf(F, μ / σ)
 
@@ -707,9 +719,13 @@ function test!(r0::Vec, ws::Vec2, ξ::Vec, out::Int)
     return o != out
 end
 
-function test(ws::Vec2, ξs::Vec2, output::IVec)
-    r0 = Array{Float64}(length(ws))
-    sum([test!(r0, ws, ξ, out) for (ξ,out) in zip(ξs, output)])
+let r0d = Dict{Int,Vec}()
+    global test
+    function test(ws::Vec2, ξs::Vec2, output::IVec)
+        N = length(ws)
+        r0 = get!(r0d, N) do; Vec(N); end
+        sum([test!(r0, ws, ξ, out) for (ξ,out) in zip(ξs, output)])
+    end
 end
 
 function test(messages::Messages, patterns::Patterns)
@@ -1002,11 +1018,11 @@ successive runs of the algorithms, as the `initmessages` keyword argument and th
 
 Example of a run which solves a problem with `N * K = 1605` synapses with `K = 5` at `α = 0.3`:
 ```
-julia> errs, messages, patterns = B.focusingBP(321, 5, 0.3, randfact=0.1, seed=135, max_iters=1, damping=0.5);
+julia> errs, messages, patterns = focusingBP(321, 5, 0.3, randfact=0.1, seed=135, max_iters=1, damping=0.5);
 ```
 """
 function focusingBP(N::Integer, K::Integer,
-                    initpatt::Union{AbstractString, Tuple{Vec2,Vec}, Real, Patterns};
+                    initpatt::Union{AbstractString,Tuple{Vec2,Vec},Real,Patterns};
 
                     max_iters::Integer = 1000,
                     max_steps::Integer = typemax(Int),

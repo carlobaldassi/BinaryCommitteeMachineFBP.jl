@@ -19,16 +19,16 @@ MagP64(pp::Real, pm::Real) = MagP64((pp - pm) / (pp + pm))
 
 isfinite(a::MagP64) = isfinite(m2f(a))
 
-function ⊗(a::MagP64, b::MagP64)
+@inline function ⊗(a::MagP64, b::MagP64)
     xa = m2f(a)
     xb = m2f(b)
-    return f2mP(clamp((xa + xb) / (1 + xa * xb), -1, 1))
+    # return f2mP(clamp((xa + xb) / (1 + xa * xb), -1.0, 1.0))
+    # NOTE: no clamping should be required as long as the xs are in [-1,1]
+    # return f2mP((xa + xb) / (1 + xa * xb))
+    return f2mP((xa + xb) / muladd(xa, xb, 1.0))
+
 end
-function ⊘(a::MagP64, b::MagP64)
-    xa = m2f(a)
-    xb = m2f(b)
-    return f2mP(xa == xb ? 0.0 : clamp((xa - xb) / (1 - xa * xb), -1, 1))
-end
+@inline ⊘(a::MagP64, b::MagP64) = ifelse(a == b, f2mP(0.0), a ⊗ (-b))
 
 reinforce(m0::MagP64, γ::Float64) = MagP64(tanh(atanh(m2f(m0)) * γ))
 

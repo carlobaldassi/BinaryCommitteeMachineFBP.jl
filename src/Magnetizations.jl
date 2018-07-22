@@ -4,7 +4,8 @@ module Magnetizations
 
 export Mag64, MagT64, MagP64, mfill, mflatp, mrand, damp, reinforce, ⊗, ⊘, ↑, sign0,
        merf, exactmix, erfmix, mtanh, log1pxy, mcrossentropy,
-       logZ, forcedmag, showinner, parseinner, magformat
+       logZ, forcedmag, showinner, parseinner, magformat,
+       conv_diff
 
 VERSION >= v"0.6.0-dev.2767" && using SpecialFunctions
 using Compat
@@ -15,8 +16,8 @@ import Base: convert, promote_rule, *, /, +, -, sign, signbit, isnan,
 
 @compat abstract type Mag64 end
 
-m2f(a::Mag64) = reinterpret(Float64, a)
-f2m{F<:Mag64}(::Type{F}, a::Float64) = reinterpret(F, a)
+@inline m2f(a::Mag64) = reinterpret(Float64, a)
+@inline f2m{F<:Mag64}(::Type{F}, a::Float64) = reinterpret(F, a)
 
 convert{T<:Real}(::Type{T}, y::Mag64) = convert(T, Float64(y))
 convert{F<:Mag64}(::Type{F}, y::Real) = convert(F, Float64(y))
@@ -71,6 +72,7 @@ reinforce(m::Mag64, m0::Mag64, γ::Float64) = m ⊗ reinforce(m0, γ)
 
 damp(newx::Float64, oldx::Float64, λ::Float64) = newx * (1 - λ) + oldx * λ
 
+Base.:(==){F<:Mag64}(a::F, b::F) = (m2f(a) == m2f(b))
 Base.:(==)(a::Mag64, b::Float64) = (Float64(a) == b)
 Base.:(==)(a::Float64, b::Mag64) = (b == a)
 
@@ -86,6 +88,8 @@ end
 logZ{F<:Mag64}(u::Vector{F}) = logZ(zero(F), u)
 
 ↑{F<:Mag64}(m::F, x::Real) = mtanh(F, x * atanh(m))
+
+conv_diff{F<:Mag64}(x::F, y::F) = abs(m2f(x) - m2f(y))
 
 include("MagnetizationsP.jl")
 include("MagnetizationsT.jl")

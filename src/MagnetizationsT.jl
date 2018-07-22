@@ -30,7 +30,7 @@ isfinite(a::MagT64) = !isnan(m2f(a))
 function ⊘(a::MagT64, b::MagT64)
     xa = m2f(a)
     xb = m2f(b)
-    return f2mT(ifelse(xa == xb, 0.0, xa - xb))
+    return f2mT(ifelse(xa == xb, 0.0, xa - xb)) # NOTE: the ifelse is for the Inf case
 end
 
 reinforce(m0::MagT64, γ::Float64) = f2mT(m2f(m0) * γ)
@@ -95,7 +95,7 @@ function auxmix(H::MagT64, a₊::Float64, a₋::Float64)
                 t2 = 0.0
             end
         else # isinf(a₊) && isinf(a₋)
-            if (sign(a₊) == sign(aH) && sign(a₊) == sign(aH)) || (sign(a₊) ≠ sign(aH) && sign(a₊) ≠ sign(aH))
+            if (sign(a₊) == sign(aH) && sign(a₋) == sign(aH)) || (sign(a₊) ≠ sign(aH) && sign(a₋) ≠ sign(aH))
                 t1 = 0.0
                 t2 = 0.0
             elseif sign(a₊) == sign(aH) # && sign(a₋) ≠ sign(aH)
