@@ -4,8 +4,7 @@ module Util
 
 export exclusive, checkdims, chgeltype,
        @readmagvec, @dumpmagvecs,
-       IVec, Vec, Vec2, MagVec, MagVec2, MagVec3,
-       @inner
+       IVec, Vec, Vec2, MagVec, MagVec2, MagVec3
 
 using Compat
 using ..Mag64, ..showinner, ..parseinner
@@ -33,28 +32,12 @@ function annotate_new!(T, ex::Expr)
     return ex
 end
 
-# horrible macro to keep compatibility with both julia 0.5 and 0.6,
-# while avoiding some even more horrible syntax
-macro inner(T, ex)
-    VERSION < v"0.6-" && return esc(ex)
-    @assert Base.Meta.isexpr(ex, [:(=), :function])
-    @assert length(ex.args) == 2
-    @assert isa(ex.args[1], Expr) && ex.args[1].head == :call
-    @assert isa(ex.args[1].args[1], Symbol)
-    fn = ex.args[1].args[1]
-    fargs = ex.args[1].args[2:end]
-    body = ex.args[2]
-    annotate_new!(T, body)
-
-    return esc(Expr(ex.head, Expr(:where, Expr(:call, Expr(:curly, fn, T), fargs...), T), body))
-end
-
 const IVec = Vector{Int}
 const Vec = Vector{Float64}
 const Vec2 = Vector{Vec}
-@compat const MagVec{M<:Mag64} = Vector{M}
-@compat const MagVec2{M<:Mag64} = Vector{MagVec{M}}
-@compat const MagVec3{M<:Mag64} = Vector{MagVec2{M}}
+const MagVec{M<:Mag64} = Vector{M}
+const MagVec2{M<:Mag64} = Vector{MagVec{M}}
+const MagVec3{M<:Mag64} = Vector{MagVec2{M}}
 
 function checkdims{V<:AbstractArray}(x::AbstractArray{V}, N::Integer, r::Integer...)
     @assert length(x) == N

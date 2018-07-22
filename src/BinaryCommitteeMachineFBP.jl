@@ -10,7 +10,7 @@ using StatsFuns
 using GZip
 using ExtractMacro
 using Iterators
-VERSION >= v"0.6.0-dev.2767" && using SpecialFunctions
+using SpecialFunctions
 using Compat
 
 include("Magnetizations.jl")
@@ -19,7 +19,7 @@ using .Magnetizations
 include("Util.jl")
 using .Util
 
-immutable Messages{F<:Mag64}
+struct Messages{F<:Mag64}
     M::Int
     N::Int
     K::Int
@@ -49,8 +49,8 @@ immutable Messages{F<:Mag64}
     mτ2::MagVec{F}    # 2+
     uτ1::MagVec2{F}   # 2
 
-    @inner F function Messages(M::Int, N::Int, K::Int, ux::MagVec2{F}, mw::MagVec2{F}, mτ1::MagVec2{F}, uw::MagVec3{F},
-                               Uτ1::MagVec2{F}, mτ2::MagVec{F}, uτ1::MagVec2{F}; check::Bool = true)
+    function Messages{F}(M::Int, N::Int, K::Int, ux::MagVec2{F}, mw::MagVec2{F}, mτ1::MagVec2{F}, uw::MagVec3{F},
+                         Uτ1::MagVec2{F}, mτ2::MagVec{F}, uτ1::MagVec2{F}; check::Bool = true) where {F<:Mag64}
         if check
             checkdims(ux, K, N)
             checkdims(mw, K, N)
@@ -189,7 +189,7 @@ function print_mags(io::IO, messages::Messages)
     end
 end
 
-type Params{F<:Mag64}
+mutable struct Params{F<:Mag64}
     damping::Float64
     ϵ::Float64
     β::Float64
@@ -202,7 +202,7 @@ type Params{F<:Mag64}
     quiet::Bool
 end
 
-immutable Patterns
+struct Patterns
     M::Int
     X::Vec2
     output::IVec
@@ -839,9 +839,9 @@ is supported. To be provided as an argument to [`focusingBP`](@ref).
 Available protocols are: [`StandardReinforcement`](@ref), [`Scoping`](@ref), [`PseudoReinforcement`](@ref) and
 [`FreeScoping`](@ref).
 """
-@compat abstract type FocusingProtocol end
+abstract type FocusingProtocol end
 
-immutable StandardReinforcement <: FocusingProtocol
+struct StandardReinforcement <: FocusingProtocol
     r::Range{Float64}
     StandardReinforcement{T<:Real}(r::Range{T}) = new(r)
 end
@@ -871,7 +871,7 @@ Base.done(s::StandardReinforcement, i) = done(s.r, i)
 
 Focusing protocol with fixed `y` and a varying `γ` taken from the given `γr` range.
 """
-immutable Scoping <: FocusingProtocol
+struct Scoping <: FocusingProtocol
     γr::Range{Float64}
     y::Float64
     Scoping(γr::Range, y) = new(γr, y)
@@ -885,7 +885,7 @@ end
 Base.done(s::Scoping, i) = done(s.γr, i)
 
 
-immutable PseudoReinforcement <: FocusingProtocol
+struct PseudoReinforcement <: FocusingProtocol
     r::Vector{Float64}
     x::Float64
     PseudoReinforcement{T<:Real}(r::Range{T}...; x::Real=0.5) = new(vcat(map(collect, r)...), x)
@@ -943,7 +943,7 @@ Example:
 FreeScoping([(1/(1-x), (2-x)/(1-x)) for x = 0:0.01:0.99])
 ```
 """
-immutable FreeScoping <: FocusingProtocol
+struct FreeScoping <: FocusingProtocol
     list::Vector{NTuple{3,Float64}}
     FreeScoping(list::Vector{NTuple{3,Float64}}) = new(list)
 end

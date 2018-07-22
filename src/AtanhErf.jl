@@ -5,7 +5,7 @@ module AtanhErf
 export atanherf, batanherf
 
 using StatsFuns
-VERSION >= v"0.6.0-dev.2767" && using SpecialFunctions
+using SpecialFunctions
 using JLD
 using Interpolations
 using Compat

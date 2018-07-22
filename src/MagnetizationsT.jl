@@ -2,7 +2,7 @@
 
 using StatsFuns
 
-@compat primitive type MagT64 <: Mag64 64 end
+primitive type MagT64 <: Mag64 64 end
 
 f2mT(a::Float64) = f2m(MagT64, a)
 
