@@ -7,7 +7,7 @@ export exclusive, checkdims, chgeltype,
        IVec, Vec, Vec2, MagVec, MagVec2, MagVec3
 
 using Compat
-using ..Mag64, ..showinner, ..parseinner
+using ..Magnetizations: Mag64, showinner, parseinner
 
 if success(`which lockfile`)
     function exclusive(f::Function, fn::AbstractString = "lock.tmp")
@@ -39,7 +39,7 @@ const MagVec{M<:Mag64} = Vector{M}
 const MagVec2{M<:Mag64} = Vector{MagVec{M}}
 const MagVec3{M<:Mag64} = Vector{MagVec2{M}}
 
-function checkdims{V<:AbstractArray}(x::AbstractArray{V}, N::Integer, r::Integer...)
+function checkdims(x::AbstractArray{<:AbstractArray}, N::Integer, r::Integer...)
     @assert length(x) == N
     @assert all(v->checkdims(v, r...), x)
     return true
@@ -48,16 +48,16 @@ function checkdims(x::AbstractArray, N::Integer)
     @assert length(x) == N
     return true
 end
-checkdims{V<:AbstractArray}(x::AbstractArray{V}, N::Integer) = error("too few dimensions")
+checkdims(x::AbstractArray{<:AbstractArray}, N::Integer) = error("too few dimensions")
 checkdims(x::AbstractArray, N::Integer, r::Integer...) = error("not enough dimensions")
 
-changedeltype{V<:Vector,T}(::Type{Vector{V}}, ::Type{T}) = Vector{changedeltype(V, T)}
-changedeltype{X,T}(::Type{Vector{X}}, ::Type{T}) = Vector{T}
+changedeltype(::Type{Vector{V}}, ::Type{T}) where {V<:Vector,T} = Vector{changedeltype(V, T)}
+changedeltype(::Type{Vector{X}}, ::Type{T}) where {X,T} = Vector{T}
 
-function chgeltype{V<:Vector,T}(x::Vector{V}, ::Type{T})
+function chgeltype(x::Vector{<:Vector}, ::Type{T}) where {T}
     eltype(changedeltype(typeof(x), T))[chgeltype(y, T) for y in x]
 end
-chgeltype{X,T}(x::Vector{X}, ::Type{T}) = convert(Vector{T}, x)
+chgeltype(x::Vector, ::Type{T}) where {T} = convert(Vector{T}, x)
 
 
 macro readmagvec(l, fmt, vs...)
@@ -66,7 +66,7 @@ macro readmagvec(l, fmt, vs...)
         vn = Regex(string(v, "(\\[|\\s)"))
         ex = quote
             $ex
-            if ismatch($vn, $(esc(l)))
+            if occursin($vn, $(esc(l)))
                 _readmagvec($(esc(l)), $(esc(fmt)), $(esc(v)))
                 @goto found
             end
@@ -80,11 +80,11 @@ macro readmagvec(l, fmt, vs...)
     ex
 end
 
-function _readmagvec{F}(l::AbstractString, fmt::Type{Val{F}}, v::Array)
+function _readmagvec(l::AbstractString, fmt::Type{Val{F}}, v::Array) where {F}
     sl = split(l)
     pre = sl[1]
-    ismatch(r"^[^[]+(?:\[\d+\])*$", pre) || error("invalid messages file")
-    inds = map(x->parse(Int,x), split(replace(pre, r"[][]", " "))[2:end])
+    occursin(r"^[^[]+(?:\[\d+\])*$", pre) || error("invalid messages file")
+    inds = map(x->parse(Int,x), split(replace(pre, r"[][]" => " "))[2:end])
     for i in inds
         v = v[i]
     end
@@ -106,7 +106,7 @@ macro dumpmagvecs(io, vs...)
     ex
 end
 
-function _dumpmagvec{T<:Array}(io::IO, a::Array{T}, s::AbstractString)
+function _dumpmagvec(io::IO, a::Array{<:Array}, s::AbstractString)
     for (i,v) in enumerate(a)
         _dumpmagvec(io, v, "$s[$i]")
     end
@@ -119,6 +119,5 @@ function _dumpmagvec(io::IO, a::Array, s::AbstractString)
     end
     println(io)
 end
-
 
 end

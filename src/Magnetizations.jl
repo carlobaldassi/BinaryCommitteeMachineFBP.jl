@@ -14,7 +14,7 @@ import Base: convert, promote_rule, *, /, +, -, sign, signbit, isnan,
              show, showcompact, abs, isfinite, isless, copysign,
              atanh, zero
 
-abstract type Mag64 end
+abstract type Mag64 <: Number end
 
 @inline m2f(a::Mag64) = reinterpret(Float64, a)
 @inline f2m(::Type{F}, a::Float64) where {F<:Mag64} = reinterpret(F, a)
@@ -26,6 +26,8 @@ convert(::Type{F}, x::F) where {F<:Mag64} = x
 convert(::Type{F}, x::Mag64) where {F<:Mag64} = F(Float64(x))
 
 Mag64(::Type{F}, pp::Real, pm::Real) where {F<:Mag64} = F(pp, pm)
+
+Float64(x::F) where {F<:Mag64} = convert(Float64, x)
 
 promote_rule(::Type{<:Mag64}, ::Type{Float64}) = Float64
 
@@ -75,6 +77,8 @@ damp(newx::Float64, oldx::Float64, λ::Float64) = newx * (1 - λ) + oldx * λ
 Base.:(==)(a::F, b::F) where {F<:Mag64} = (m2f(a) == m2f(b))
 Base.:(==)(a::Mag64, b::Float64) = (Float64(a) == b)
 Base.:(==)(a::Float64, b::Mag64) = (b == a)
+
+Base.iszero(a::Mag64) = iszero(m2f(a))
 
 isless(m::Mag64, x::Real) = isless(Float64(m), x)
 isless(x::Real, m::Mag64) = isless(x, Float64(m))

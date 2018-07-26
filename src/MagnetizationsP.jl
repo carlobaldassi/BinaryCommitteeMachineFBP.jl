@@ -10,6 +10,8 @@ parseinner(::Type{Val{:plain}}, s::AbstractString) = MagP64(parse(Float64, s))
 convert(::Type{MagP64}, y::Float64) = f2mP(y)
 convert(::Type{Float64}, y::MagP64) = m2f(y)
 
+MagP64(y::Float64) = convert(MagP64, y)
+
 forcedmag(::Type{MagP64}, y::Float64) = MagP64(y)
 
 mtanh(::Type{MagP64}, x::Float64) = f2mP(tanh(x))

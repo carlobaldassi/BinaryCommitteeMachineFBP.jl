@@ -1,7 +1,7 @@
 module BCMFBPTests
 
 using BinaryCommitteeMachineFBP
-using Base.Test
+using Compat.Test
 
 using GZip
 
@@ -91,6 +91,6 @@ function tst()
     end
 end
 
-tst()
+@time tst()
 
 end # module

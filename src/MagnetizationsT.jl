@@ -17,6 +17,8 @@ parseinner(::Type{Val{:tanh}}, s::AbstractString) = mtanh(MagT64, parse(Float64,
 convert(::Type{MagT64}, y::Float64) = f2mT(clamp(atanh(y), -mInf, mInf))
 convert(::Type{Float64}, y::MagT64) = tanh(m2f(y))
 
+MagT64(y::Float64) = convert(MagT64, y)
+
 forcedmag(::Type{MagT64}, y::Float64) = f2mT(atanh(y))
 
 mtanh(::Type{MagT64}, x::Float64) = f2mT(x)
