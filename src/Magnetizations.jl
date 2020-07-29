@@ -8,7 +8,6 @@ export Mag64, MagT64, MagP64, mfill, mflatp, mrand, damp, reinforce, ⊗, ⊘, �
        conv_diff
 
 using SpecialFunctions
-using Compat
 
 import Base: convert, promote_rule, *, /, +, -, sign, signbit, isnan,
              show, showcompact, abs, isfinite, isless, copysign,

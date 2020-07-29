@@ -1,0 +1,12 @@
+[deps]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+GZip = "92fee26a-97fe-5a0c-ad85-20a5f3185b63"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
+
+[compat]
+GZip = "0.5"
+Interpolations = "0.12"
+SpecialFunctions = "0.10"
+StatsFuns = "0.9"

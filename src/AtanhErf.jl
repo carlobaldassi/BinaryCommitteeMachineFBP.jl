@@ -8,7 +8,6 @@ using StatsFuns
 using SpecialFunctions
 using JLD
 using Interpolations
-using Compat
 
 const builddir = joinpath(dirname(@__FILE__), "..", "deps", "builds")
 batanherf(x::Float64) = Float64(atanh(erf(big(x))))
@@ -21,22 +20,28 @@ let
 
     interp_degree = Quadratic
     interp_boundary = Line
-    interp_type = Interpolations.BSplineInterpolation{Float64,1,Vector{Float64},
-                                                      BSpline{interp_degree{interp_boundary}},
-                                                      OnGrid,0}
+    interp_grid = OnGrid
+    # interp_type = Interpolations.BSplineInterpolation{Float64,1,Vector{Float64},
+    #                                                   BSpline{interp_degree{interp_boundary}},
+    #                                                   OnGrid,0}
 
+    interp_type = Interpolations.BSplineInterpolation{Float64,1,Array{Float64,1},
+                                                      BSpline{interp_degree{interp_boundary{interp_grid}}},
+                                                      Tuple{Base.Slice{UnitRange{Int64}}}}
     function getinp!()
         isdir(builddir) || mkdir(builddir)
         filename = joinpath(builddir, "atanherf_interp.max_$mm.step_$st.jld")
         if isfile(filename)
-            Core.eval(Main, :(import Interpolations))
             inp = load(filename, "inp")
         else
-            info("Computing atanh(erf(x)) table, this may take a while...")
+            @info("Computing atanh(erf(x)) table, this may take a while...")
             inp = setprecision(BigFloat, 512) do
-                interpolate!(Float64[atanh(erf(x)) for x in rb], BSpline(interp_degree(interp_boundary())), OnGrid())
+                interpolate!(Float64[atanh(erf(x)) for x in rb], BSpline(interp_degree(interp_boundary(interp_grid()))))
             end
-            save(filename, Dict("inp"=>inp))
+            jldopen(filename, "w") do f
+                addrequire(f, Interpolations)
+                write(f, "inp", inp)
+            end
         end
         # @show interp_type
         # @show typeof(inp)
@@ -48,7 +53,7 @@ let
     inp = getinp!()
 
     global atanherf_interp
-    atanherf_interp(x::Float64) = inp[(x - first(r)) / step(r) + 1]::Float64
+    atanherf_interp(x::Float64) = inp((x - first(r)) / step(r) + 1)::Float64
 end
 
 function atanherf_largex(x::Float64)

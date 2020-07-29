@@ -10,8 +10,8 @@ using StatsFuns
 using GZip
 using ExtractMacro
 using SpecialFunctions
-using Compat, Compat.Printf, Compat.LinearAlgebra, Compat.Random
-import Compat: copyto!
+using Printf, LinearAlgebra, Random
+import Base: copyto!
 
 include("Magnetizations.jl")
 using .Magnetizations
@@ -859,12 +859,11 @@ Shorthand for [`StandardReinforcement`](@ref)`(0:dr:(1-dr))`.
 """
 StandardReinforcement(dr::Float64) = StandardReinforcement(0.0:dr:(1-dr))
 
-Base.start(s::StandardReinforcement) = start(s.r)
-function Base.next(s::StandardReinforcement, i)
-    n = next(s.r, i)
+function Base.iterate(s::StandardReinforcement, i = 1)
+    n = iterate(s.r, i)
+    n ≡ nothing && return nothing
     return (Inf, 1/(1-n[1]), Inf), n[2]
 end
-Base.done(s::StandardReinforcement, i) = done(s.r, i)
 
 """
     Scoping(γr::AbstractRange, y) <: FocusingProtocol
@@ -877,12 +876,11 @@ struct Scoping <: FocusingProtocol
     Scoping(γr::AbstractRange, y) = new(γr, y)
 end
 
-Base.start(s::Scoping) = start(s.γr)
-function Base.next(s::Scoping, i)
-    n = next(s.γr, i)
+function Base.iterate(s::Scoping, i = 1)
+    n = iterate(s.γr, i)
+    n ≡ nothing && return nothing
     return (n[1], s.y, Inf), n[2]
 end
-Base.done(s::Scoping, i) = done(s.γr, i)
 
 
 struct PseudoReinforcement <: FocusingProtocol
@@ -911,13 +909,9 @@ where `ρ` is taken from the given range(s) `r`. With `x=0`, this is basically t
 Shorthand for [`PseudoReinforcement`](@ref)`(0:dr:(1-dr); x=x)`.
 """ PseudoReinforcement(dr::Float64; x::Real=0.5) = PseudoReinforcement(0.0:dr:(1-dr), x=x)
 
-Base.start(s::PseudoReinforcement) = start(s.r)
-function Base.next(s::PseudoReinforcement, i)
-    if done(s.r, i)
-        n = (Inf, Inf, Inf), i
-    else
-        n = next(s.r, i)
-    end
+function Base.iterate(s::PseudoReinforcement, i = 1)
+    n = iterate(s.r, i)
+    n ≡ nothing && return nothing
     x = s.x
     ρ = n[1]
     # some special cases just to avoid possible 0^0
@@ -929,7 +923,6 @@ function Base.next(s::PseudoReinforcement, i)
         return (atanh(ρ^x), 1+ρ^(1-2x)/(1-ρ), Inf), n[2]
     end
 end
-Base.done(s::PseudoReinforcement, i) = done(s.r, i)
 
 """
     FreeScoping(list::Vector{NTuple{2,Float64}}) <: FocusingProtocol
@@ -948,9 +941,7 @@ struct FreeScoping <: FocusingProtocol
 end
 FreeScoping(list::Vector{NTuple{2,Float64}}) = FreeScoping(NTuple{3,Float64}[(γ,y,Inf) for (γ,y) in list])
 
-Base.start(s::FreeScoping) = start(s.list)
-Base.next(s::FreeScoping, i) = next(s.list, i)
-Base.done(s::FreeScoping, i) = done(s.list, i)
+Base.iterate(s::FreeScoping, i = 1) = iterate(s.list, i)
 
 """
     focusingBP(N, K, patternspec; keywords...)
@@ -1040,7 +1031,7 @@ function focusingBP(N::Integer, K::Integer,
                     outfile::Union{AbstractString,Nothing} = nothing, # note: "" => default, nothing => no output
                     outmessfiletmpl::Union{AbstractString,Nothing} = nothing) # note: same as outfile
 
-    srand(seed)
+    Random.seed!(seed)
 
     N > 0 || throw(ArgumentError("N must be positive; given: $N"))
     K > 0 || throw(ArgumentError("K must be positive; given: $K"))

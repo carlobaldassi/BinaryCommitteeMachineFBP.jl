@@ -1,8 +1,7 @@
 module BCMFBPTests
 
 using BinaryCommitteeMachineFBP
-using Compat.Test
-
+using Test
 using GZip
 
 const N = 21

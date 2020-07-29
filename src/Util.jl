@@ -6,7 +6,6 @@ export exclusive, checkdims, chgeltype,
        @readmagvec, @dumpmagvecs,
        IVec, Vec, Vec2, MagVec, MagVec2, MagVec3
 
-using Compat
 using ..Magnetizations: Mag64, showinner, parseinner
 
 if success(`which lockfile`)

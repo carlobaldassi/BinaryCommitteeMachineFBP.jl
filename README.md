@@ -12,19 +12,11 @@ by Carlo Baldassi, Christian Borgs, Jennifer Chayes, Alessandro Ingrosso,
 Carlo Lucibello, Luca Saglietti and Riccardo Zecchina,
 Proc. Natl. Acad. Sci. U.S.A. 113: E7655-E7662 (2016), [doi:10.1073/pnas.1608103113](http://dx.doi.org/10.1073/pnas.1608103113).
 
-The code is written in [Julia](http://julialang.org).
-
-The package is tested against Julia `0.6` and *current* (at the time of writing) `0.7-beta2` on Linux, OS X, and Windows.
+The code is written in [Julia](http://julialang.org). It was last tested with Julia version 1.4.
 
 ### Installation
 
-To install the module, use this command from within Julia 0.6:
-
-```
-julia> Pkg.clone("https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl")
-```
-
-or, in Julia 0.7, switch to pkg mode with the `]` key and use this command:
+To install the module, switch to pkg mode with the `]` key and use this command:
 
 ```
 pkg> add https://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl
