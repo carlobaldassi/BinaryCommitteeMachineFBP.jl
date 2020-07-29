@@ -1,6 +1,6 @@
 # This file is a part of BinaryCommitteeMachineFBP.jl. License is MIT: http://github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl/LICENCE.md
 
-@compat primitive type MagP64 <: Mag64 64 end
+primitive type MagP64 <: Mag64 64 end
 
 f2mP(a::Float64) = f2m(MagP64, a)
 
@@ -9,6 +9,8 @@ parseinner(::Type{Val{:plain}}, s::AbstractString) = MagP64(parse(Float64, s))
 
 convert(::Type{MagP64}, y::Float64) = f2mP(y)
 convert(::Type{Float64}, y::MagP64) = m2f(y)
+
+MagP64(y::Float64) = convert(MagP64, y)
 
 forcedmag(::Type{MagP64}, y::Float64) = MagP64(y)
 
@@ -19,16 +21,16 @@ MagP64(pp::Real, pm::Real) = MagP64((pp - pm) / (pp + pm))
 
 isfinite(a::MagP64) = isfinite(m2f(a))
 
-function ⊗(a::MagP64, b::MagP64)
+@inline function ⊗(a::MagP64, b::MagP64)
     xa = m2f(a)
     xb = m2f(b)
-    return f2mP(clamp((xa + xb) / (1 + xa * xb), -1, 1))
+    # return f2mP(clamp((xa + xb) / (1 + xa * xb), -1.0, 1.0))
+    # NOTE: no clamping should be required as long as the xs are in [-1,1]
+    # return f2mP((xa + xb) / (1 + xa * xb))
+    return f2mP((xa + xb) / muladd(xa, xb, 1.0))
+
 end
-function ⊘(a::MagP64, b::MagP64)
-    xa = m2f(a)
-    xb = m2f(b)
-    return f2mP(xa == xb ? 0.0 : clamp((xa - xb) / (1 - xa * xb), -1, 1))
-end
+@inline ⊘(a::MagP64, b::MagP64) = ifelse(a == b, f2mP(0.0), a ⊗ (-b))
 
 reinforce(m0::MagP64, γ::Float64) = MagP64(tanh(atanh(m2f(m0)) * γ))
 

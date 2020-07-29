@@ -2,7 +2,7 @@
 
 using StatsFuns
 
-@compat primitive type MagT64 <: Mag64 64 end
+primitive type MagT64 <: Mag64 64 end
 
 f2mT(a::Float64) = f2m(MagT64, a)
 
@@ -17,6 +17,8 @@ parseinner(::Type{Val{:tanh}}, s::AbstractString) = mtanh(MagT64, parse(Float64,
 convert(::Type{MagT64}, y::Float64) = f2mT(clamp(atanh(y), -mInf, mInf))
 convert(::Type{Float64}, y::MagT64) = tanh(m2f(y))
 
+MagT64(y::Float64) = convert(MagT64, y)
+
 forcedmag(::Type{MagT64}, y::Float64) = f2mT(atanh(y))
 
 mtanh(::Type{MagT64}, x::Float64) = f2mT(x)
@@ -30,7 +32,7 @@ isfinite(a::MagT64) = !isnan(m2f(a))
 function ⊘(a::MagT64, b::MagT64)
     xa = m2f(a)
     xb = m2f(b)
-    return f2mT(ifelse(xa == xb, 0.0, xa - xb))
+    return f2mT(ifelse(xa == xb, 0.0, xa - xb)) # NOTE: the ifelse is for the Inf case
 end
 
 reinforce(m0::MagT64, γ::Float64) = f2mT(m2f(m0) * γ)
@@ -95,7 +97,7 @@ function auxmix(H::MagT64, a₊::Float64, a₋::Float64)
                 t2 = 0.0
             end
         else # isinf(a₊) && isinf(a₋)
-            if (sign(a₊) == sign(aH) && sign(a₊) == sign(aH)) || (sign(a₊) ≠ sign(aH) && sign(a₊) ≠ sign(aH))
+            if (sign(a₊) == sign(aH) && sign(a₋) == sign(aH)) || (sign(a₊) ≠ sign(aH) && sign(a₋) ≠ sign(aH))
                 t1 = 0.0
                 t2 = 0.0
             elseif sign(a₊) == sign(aH) # && sign(a₋) ≠ sign(aH)

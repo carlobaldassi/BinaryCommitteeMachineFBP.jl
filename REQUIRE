@@ -1,9 +1,8 @@
-julia 0.5
+julia 0.6
 ExtractMacro
 GZip 0.2
 StatsFuns 0.2
-Iterators 0.1.6
 Interpolations 0.3.5
 JLD 0.6
-Compat 0.18.0
+Compat 0.62
 SpecialFunctions 0.2
