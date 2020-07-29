@@ -1,10 +1,13 @@
 using Documenter, BinaryCommitteeMachineFBP
 
-makedocs()
+CIbuild = get(ENV, "CI", nothing) == "true"
+
+makedocs(
+    modules  = [BinaryCommitteeMachineFBP],
+    format   = Documenter.HTML(prettyurls = CIbuild),
+    sitename = "BinaryCommitteeMachineFBP.jl"
+    )
 
 deploydocs(
-    deps   = Deps.pip("pygments", "mkdocs", "mkdocs-bootswatch", "python-markdown-math"),
     repo   = "github.com/carlobaldassi/BinaryCommitteeMachineFBP.jl.git",
-    julia  = "0.5"
 )
-
