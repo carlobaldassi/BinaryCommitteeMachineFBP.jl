@@ -1,8 +1,8 @@
 # BinaryCommitteeMachineFBP.jl
 
-| **Documentation**                       | **Build Status**                                                                                |
-|:---------------------------------------:|:-----------------------------------------------------------------------------------------------:|
-| [![][docs-latest-img]][docs-latest-url] | [![][travis-img]][travis-url] [![][appveyor-img]][appveyor-url] [![][codecov-img]][codecov-url] |
+| **Documentation**                 | **Build Status**                                               |
+|:---------------------------------:|:--------------------------------------------------------------:|
+| [![][docs-dev-img]][docs-dev-url] | [![][travis-img]][travis-url]  [![][codecov-img]][codecov-url] |
 
 This package implements the Focusing Belief Propagation algorithm for
 committee machines with binary weights described in the paper
@@ -26,16 +26,13 @@ Dependencies will be installed automatically.
 
 ## Documentation
 
-- [**LATEST**][docs-latest-url] &mdash; *in-development version of the documentation.*
+- [In-development version of the documentation][docs-dev-url]
 
-[docs-latest-img]: https://img.shields.io/badge/docs-latest-blue.svg
-[docs-latest-url]: https://carlobaldassi.github.io/BinaryCommitteeMachineFBP.jl/latest
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
+[docs-dev-url]: https://carlobaldassi.github.io/BinaryCommitteeMachineFBP.jl/dev
 
 [travis-img]: https://travis-ci.org/carlobaldassi/BinaryCommitteeMachineFBP.jl.svg?branch=master
 [travis-url]: https://travis-ci.org/carlobaldassi/BinaryCommitteeMachineFBP.jl
-
-[appveyor-img]: https://ci.appveyor.com/api/projects/status/aeclj3cs8c2l0tvt/branch/master?svg=true
-[appveyor-url]: https://ci.appveyor.com/project/carlobaldassi/binarycommitteemachinefbp-jl/branch/master
 
 [codecov-img]: https://codecov.io/gh/carlobaldassi/BinaryCommitteeMachineFBP.jl/branch/master/graph/badge.svg
 [codecov-url]: https://codecov.io/gh/carlobaldassi/BinaryCommitteeMachineFBP.jl

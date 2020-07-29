@@ -18,7 +18,7 @@ if success(`which lockfile`)
         end
     end
 else
-    warn("could not find the `lockfile` program. Try installing it (it's included with `procmail` – www.procmail.org).")
+    @warn("could not find the `lockfile` program. Try installing it (it's included with `procmail` – www.procmail.org).")
     exclusive(f::Function, fn::AbstractString) = nothing
 end
 
