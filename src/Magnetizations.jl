@@ -10,7 +10,7 @@ export Mag64, MagT64, MagP64, mfill, mflatp, mrand, damp, reinforce, ⊗, ⊘, �
 using SpecialFunctions
 
 import Base: convert, promote_rule, *, /, +, -, sign, signbit, isnan,
-             show, showcompact, abs, isfinite, isless, copysign,
+             show, abs, isfinite, isless, copysign,
              atanh, zero
 
 abstract type Mag64 <: Number end
@@ -61,7 +61,6 @@ signbit(a::Mag64) = signbit(m2f(a))
 sign0(a::Union{Mag64,Real}) = (1 - 2signbit(a))
 
 show(io::IO, a::Mag64) = show(io, Float64(a))
-showcompact(io::IO, a::Mag64) = showcompact(io, Float64(a))
 showinner(io::IO, a::Mag64) = show(io, m2f(a))
 
 mfill(::Type{F}, x::Float64, n::Int) where {F<:Mag64} = F[F(x) for i = 1:n]
