@@ -6,7 +6,7 @@ export atanherf, batanherf
 
 using StatsFuns
 using SpecialFunctions
-using JLD
+using JLD2
 using Interpolations
 
 const builddir = joinpath(dirname(@__FILE__), "..", "deps", "builds")
@@ -32,14 +32,13 @@ let
         isdir(builddir) || mkdir(builddir)
         filename = joinpath(builddir, "atanherf_interp.max_$mm.step_$st.jld")
         if isfile(filename)
-            inp = load(filename, "inp")
+            @load filename inp
         else
             @info("Computing atanh(erf(x)) table, this may take a while...")
             inp = setprecision(BigFloat, 512) do
                 interpolate!(Float64[atanh(erf(x)) for x in rb], BSpline(interp_degree(interp_boundary(interp_grid()))))
             end
             jldopen(filename, "w") do f
-                addrequire(f, Interpolations)
                 write(f, "inp", inp)
             end
         end
