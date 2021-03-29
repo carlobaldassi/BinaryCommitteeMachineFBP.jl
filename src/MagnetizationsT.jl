@@ -6,9 +6,6 @@ primitive type MagT64 <: Mag64 64 end
 
 f2mT(a::Float64) = f2m(MagT64, a)
 
-include("AtanhErf.jl")
-using .AtanhErf
-
 const mInf = 30.0
 
 magformat(::Type{MagT64}) = :tanh
@@ -119,6 +116,12 @@ function auxmix(H::MagT64, a₊::Float64, a₋::Float64)
 end
 
 exactmix(H::MagT64, p₊::MagT64, p₋::MagT64) = auxmix(H, m2f(p₊), m2f(p₋))
+
+function atanherf(x)
+    ax = abs(x)
+    ax ≤ 1 && return atanh(erf(x))
+    return sign(x) * (log(2) + log1p(-erfc(ax)/2) - logerfc(ax)) / 2
+end
 
 function erfmix(H::MagT64, m₊::Float64, m₋::Float64)
     aerf₊ = atanherf(m₊)
