@@ -336,8 +336,8 @@ end
 let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Dict{Int,Vec}(),
     vHs = Dict{Int,Vec}(), leftCs = Dict{Int,Vec2}(), rightCs = Dict{Int,Vec2}()
 
-    geth(::Type{MagT64}, N::Int) = Base.@get!(hsT, N, Array{MagT64}(undef, N))
-    geth(::Type{MagP64}, N::Int) = Base.@get!(hsP, N, Array{MagP64}(undef, N))
+    geth(::Type{MagT64}, N::Int) = Base.get(()->Array{MagT64}(undef, N), hsT, N)
+    geth(::Type{MagP64}, N::Int) = Base.get(()->Array{MagP64}(undef, N), hsP, N, )
 
     global theta_node_update_approx!
     function theta_node_update_approx!(m::MagVec{F}, M::F, ξ::Vec, u::MagVec{F}, U::F, params::Params) where {F<:Mag64}
@@ -345,7 +345,7 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
 
         N = length(m)
         h::MagVec{F} = geth(F, N)
-        vh = Base.@get!(vhs, N, Array{Float64}(undef, N))
+        vh = Base.get(()->Array{Float64}(undef, N), vhs, N)
 
         subfield!(h, m, u)
         H = M ⊘ U
@@ -395,7 +395,7 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
 
         N = length(m)
         h::MagVec{F} = geth(F, N)
-        vh = Base.@get!(vhs, N, Array{Float64}(undef, N))
+        vh = Base.get(()->Array{Float64}(undef, N), vhs, N)
 
         subfield!(h, m, u)
         H = M ⊘ U
@@ -438,9 +438,9 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
 
         N = length(m)
         h::MagVec{F} = geth(F, N)
-        vh = Base.@get!(vhs, N, Array{Float64}(undef, N))
-        leftC = Base.@get!(leftCs, N, [zeros(i+1) for i = 1:N])
-        rightC = Base.@get!(rightCs, N, [zeros((N-i+1)+1) for i = 1:N])
+        vh = Base.get(()->Array{Float64}(undef, N), vhs, N)
+        leftC = Base.get(()->[zeros(i+1) for i = 1:N], leftCs, N)
+        rightC = Base.get(()->[zeros((N-i+1)+1) for i = 1:N], rightCs, N)
 
         subfield!(h, m, u)
         H = M ⊘ U
@@ -536,7 +536,7 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
     function free_energy_theta(m::MagVec{F}, M::F, ξ::Vec, u::MagVec{F}, U::F) where {F<:Mag64}
         N = length(m)
         h::MagVec{F} = geth(F, N)
-        vh = Base.@get!(vhs, N, Array{Float64}(undef, N))
+        vh = Base.get(()->Array{Float64}(undef, N), vhs, N)
 
         f = 0.0
 
@@ -567,9 +567,9 @@ let hsT = Dict{Int,MagVec{MagT64}}(), hsP = Dict{Int,MagVec{MagP64}}(), vhs = Di
 
         N = length(m)
         h::MagVec{F} = geth(F, N)
-        vh = Base.@get!(vhs, N, Array{Float64}(undef, N))
-        leftC = Base.@get!(leftCs, N, [zeros(i+1) for i = 1:N])
-        rightC = Base.@get!(rightCs, N, [zeros((N-i+1)+1) for i = 1:N])
+        vh = Base.get(()->Array{Float64}(undef, N), vhs, N)
+        leftC = Base.get(()->[zeros(i+1) for i = 1:N], leftCs, N)
+        rightC = Base.get(()->[zeros((N-i+1)+1) for i = 1:N], rightCs, N)
 
         f = 0.0
 
@@ -1091,8 +1091,8 @@ function focusingBP(N::Integer, K::Integer,
     end
     !quiet && K > 1 && (println("mags overlaps="); display(mags_symmetry(messages)[1]); println())
 
-    it = 1
-    for (γ,y,β) in fprotocol
+    for (it, (γ,y,β)) in enumerate(fprotocol)
+        it > max_steps && break
         isfinite(β) && error("finite β not yet supported; given: $β")
         pol = mtanh(F, γ)
         params.pol = pol
@@ -1110,7 +1110,7 @@ function focusingBP(N::Integer, K::Integer,
             βF = free_energy(messages, patterns, params)
             Σint = -βF - γ * S
 
-            !quiet && println("it=$it pol=$pol y=$y β=$β (ok=$ok) S=$S βF=$βF Σᵢ=$Σint q=$q q̃=$q̃ Ẽ=$errs")
+            !quiet && println("it=$it pol=$pol y=$y β=$β (ok=$ok) S=$S βF=$βF Σᵢ=$Σint q=$q q̃=$q̃ Ẽ=$errs\n")
             (ok || writeoutfile == :always) && outfile ≢ nothing && exclusive(lockfile) do
                 open(outfile, "a") do f
                     println(f, "$pol $y $β $S $q $q̃ $βF $Σint $errs")
@@ -1121,11 +1121,9 @@ function focusingBP(N::Integer, K::Integer,
                 write_messages(outmessfile, messages)
             end
         else
-            !quiet && println("it=$it pol=$pol y=$y β=$β (ok=$ok) Ẽ=$errs")
+            !quiet && println("it=$it pol=$pol y=$y β=$β (ok=$ok) Ẽ=$errs\n")
             errs == 0 && return 0, messages, patterns
         end
-        it += 1
-        it ≥ max_steps && break
     end
     return errs, messages, patterns
 end
