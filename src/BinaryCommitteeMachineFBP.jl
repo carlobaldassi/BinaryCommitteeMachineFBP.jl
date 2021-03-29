@@ -1091,8 +1091,8 @@ function focusingBP(N::Integer, K::Integer,
     end
     !quiet && K > 1 && (println("mags overlaps="); display(mags_symmetry(messages)[1]); println())
 
-    it = 1
-    for (γ,y,β) in fprotocol
+    for (it, (γ,y,β)) in enumerate(fprotocol)
+        it > max_steps && break
         isfinite(β) && error("finite β not yet supported; given: $β")
         pol = mtanh(F, γ)
         params.pol = pol
@@ -1110,7 +1110,7 @@ function focusingBP(N::Integer, K::Integer,
             βF = free_energy(messages, patterns, params)
             Σint = -βF - γ * S
 
-            !quiet && println("it=$it pol=$pol y=$y β=$β (ok=$ok) S=$S βF=$βF Σᵢ=$Σint q=$q q̃=$q̃ Ẽ=$errs")
+            !quiet && println("it=$it pol=$pol y=$y β=$β (ok=$ok) S=$S βF=$βF Σᵢ=$Σint q=$q q̃=$q̃ Ẽ=$errs\n")
             (ok || writeoutfile == :always) && outfile ≢ nothing && exclusive(lockfile) do
                 open(outfile, "a") do f
                     println(f, "$pol $y $β $S $q $q̃ $βF $Σint $errs")
@@ -1121,11 +1121,9 @@ function focusingBP(N::Integer, K::Integer,
                 write_messages(outmessfile, messages)
             end
         else
-            !quiet && println("it=$it pol=$pol y=$y β=$β (ok=$ok) Ẽ=$errs")
+            !quiet && println("it=$it pol=$pol y=$y β=$β (ok=$ok) Ẽ=$errs\n")
             errs == 0 && return 0, messages, patterns
         end
-        it += 1
-        it ≥ max_steps && break
     end
     return errs, messages, patterns
 end
